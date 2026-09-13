@@ -492,7 +492,16 @@ window.Neurova = window.Neurova || {};
     const el = document.getElementById('calibAuthNote');
     if(!el) return;
     const user = window.Neurova.getUser ? window.Neurova.getUser() : null;
-    if(user){
+    const loadFailed = window.Neurova.calibLoadFailed ? window.Neurova.calibLoadFailed() : false;
+    if(user && loadFailed){
+      el.innerHTML = `<div class="calib-auth-note">Couldn't reach your saved baseline — check your connection. <a href="#" id="calibRetryLink">Try again</a>, or just run a new calibration below.</div>`;
+      const retry = document.getElementById('calibRetryLink');
+      if(retry) retry.addEventListener('click', (e) => {
+        e.preventDefault();
+        el.innerHTML = `<div class="calib-auth-note">Checking your account for a saved baseline…</div>`;
+        if(window.Neurova.retryLoadCalibration) window.Neurova.retryLoadCalibration();
+      });
+    } else if(user){
       el.innerHTML = '';
     } else {
       el.innerHTML = `<div class="calib-auth-note">Not signed in — this baseline will be forgotten if you close this tab. <a href="#account" data-nav="account" id="calibAuthNoteLink">Log in to save it</a>.</div>`;
@@ -793,6 +802,7 @@ window.Neurova = window.Neurova || {};
   let deleteBusy = false;
   let deleteError = '';
   let needsReauth = false;
+  let calibLoadFailed = false;
   let exportBusy = false;
 
   if(firebaseReady){
@@ -805,12 +815,19 @@ window.Neurova = window.Neurova || {};
       // only recovering once it times out and falls back on its own. This setting skips
       // straight to the reliable fallback instead of waiting through that timeout.
       db.settings({ experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+      // Once a document has been fetched successfully, keep a local copy so a later
+      // flaky moment (or a genuinely offline visit) can still read it from cache
+      // instead of failing outright with "client is offline".
+      db.enablePersistence({ synchronizeTabs: true }).catch(e => {
+        console.warn('Firestore offline persistence not enabled:', e.code);
+      });
     }catch(e){
       console.error('Firebase failed to initialize:', e);
     }
   }
 
   window.Neurova.getUser = () => currentUser;
+  window.Neurova.calibLoadFailed = () => calibLoadFailed;
 
   window.Neurova.saveCalibration = async function(baselineOhms){
     if(!firebaseReady || !currentUser || !db) return false;
@@ -827,18 +844,31 @@ window.Neurova = window.Neurova || {};
     }
   };
 
-  async function loadSavedCalibrationForCurrentUser(){
+  async function loadSavedCalibrationForCurrentUser(attempt){
+    attempt = attempt || 1;
     if(!firebaseReady || !currentUser || !db) return;
     try{
       const snap = await db.collection('users').doc(currentUser.uid).get();
       cachedProfile = snap.exists ? snap.data() : {};
+      calibLoadFailed = false;
       if(snap.exists && window.Neurova.applySavedCalibration){
         window.Neurova.applySavedCalibration(snap.data());
       }
+      if(window.Neurova.onAccountChange) window.Neurova.onAccountChange();
     }catch(e){
-      console.error('Loading saved calibration failed:', e);
+      console.error('Loading saved calibration failed (attempt ' + attempt + '):', e);
+      // A single failed read is often just a slow or momentarily-offline connection
+      // settling in right after sign-in — one retry a couple seconds later clears
+      // up the large majority of these without the person needing to do anything.
+      if(attempt < 2){
+        setTimeout(() => loadSavedCalibrationForCurrentUser(attempt + 1), 2500);
+      } else {
+        calibLoadFailed = true;
+        if(window.Neurova.onAccountChange) window.Neurova.onAccountChange();
+      }
     }
   }
+  window.Neurova.retryLoadCalibration = () => loadSavedCalibrationForCurrentUser();
 
   function friendlyAuthError(code){
     const map = {
@@ -1239,7 +1269,7 @@ window.Neurova = window.Neurova || {};
   if(firebaseReady && auth){
     auth.onAuthStateChanged(user => {
       currentUser = user;
-      if(!user){ authMode = 'login'; confirmingDelete = false; deleteError = ''; needsReauth = false; cachedProfile = null; }
+      if(!user){ authMode = 'login'; confirmingDelete = false; deleteError = ''; needsReauth = false; cachedProfile = null; calibLoadFailed = false; }
       authError = '';
       authBusy = false;
       renderAccountPanel();

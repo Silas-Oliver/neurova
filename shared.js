@@ -857,11 +857,14 @@ window.Neurova = window.Neurova || {};
       if(window.Neurova.onAccountChange) window.Neurova.onAccountChange();
     }catch(e){
       console.error('Loading saved calibration failed (attempt ' + attempt + '):', e);
-      // A single failed read is often just a slow or momentarily-offline connection
-      // settling in right after sign-in — one retry a couple seconds later clears
-      // up the large majority of these without the person needing to do anything.
-      if(attempt < 2){
-        setTimeout(() => loadSavedCalibrationForCurrentUser(attempt + 1), 2500);
+      // Firestore's SDK can decide internally that it's "offline" and reject new
+      // requests immediately without actually retrying the network — so a plain
+      // retry can fail the same way even once the connection is fine again.
+      // Explicitly cycling the network off/on forces it to actually re-probe
+      // the connection instead of waiting on its own internal backoff timer.
+      if(attempt < 3){
+        try{ await db.disableNetwork(); await db.enableNetwork(); }catch(e2){ /* best effort */ }
+        setTimeout(() => loadSavedCalibrationForCurrentUser(attempt + 1), attempt * 3000);
       } else {
         calibLoadFailed = true;
         if(window.Neurova.onAccountChange) window.Neurova.onAccountChange();

@@ -11,7 +11,11 @@ window.Neurova = window.Neurova || {};
     document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === name));
     window.scrollTo(0, 0);
     history.replaceState(null, '', '#' + name);
-    if(name === 'data' && !dataChartReady){
+    // Reload every visit, not just the first. Sessions are written by running a test on
+    // the Test menu, so the common path is to log something and then come straight here —
+    // loading once per page load meant that new session was missing until a manual
+    // refresh. The read is small and superseded loads discard themselves.
+    if(name === 'data'){
       dataChartReady = true;
       initDataChart();
     }

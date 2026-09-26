@@ -4,20 +4,6 @@ window.Neurova = window.Neurova || {};
   // ---------------- page routing ----------------
   const PAGES = ['home', 'test-menu', 'data', 'specs', 'account'];
   let dataChartReady = false;
-  let sessionNum = 0;
-  let contactSeries = [];
-  let signalSeries = [];
-  let animFrame = null;
-  const SAMPLE_SESSIONS = [
-    { contact: 62, signal: 30 },
-    { contact: 68, signal: 34 },
-    { contact: 71, signal: 38 },
-    { contact: 75, signal: 41 },
-    { contact: 79, signal: 47 },
-    { contact: 83, signal: 52 },
-    { contact: 88, signal: 58 }
-  ];
-  const CHART = { padLeft: 46, padRight: 24, padTop: 16, padBottom: 30, pointGap: 68, height: 240 };
 
   function showPage(name){
     if(!PAGES.includes(name)) name = 'home';
@@ -323,6 +309,12 @@ window.Neurova = window.Neurova || {};
     line = line.trim();
     if(!line) return;
 
+    // "CONFIG:1000000:5.00" — the divider the board is actually running.
+    const cfg = line.match(/^CONFIG:(-?\d+(?:\.\d+)?):(-?\d+(?:\.\d+)?)/i);
+    if(cfg){
+      boardConfig = { fixedResistorOhms: parseFloat(cfg[1]), adcReferenceV: parseFloat(cfg[2]) };
+    }
+
     // The board reports what baseline it is actually holding, unprompted on boot and in
     // reply to STATUS. That reply — not anything the account remembers — is what decides
     // whether the tests are usable, since the board is what does the comparing.
@@ -405,6 +397,7 @@ window.Neurova = window.Neurova || {};
   // savedAccountCalib is the number Firestore remembers. On its own it's just history:
   // it unlocks nothing until the board has confirmed it actually took it.
   let boardBaseline = null;
+  let boardConfig = null;        // {fixedResistorOhms, adcReferenceV} as reported by CONFIG
   let savedAccountCalib = null;
   const SAMPLE_WINDOW_MS = 2500; // matches the Arduino's own ~3s sampling loop, just for the progress ring
 
@@ -1099,6 +1092,19 @@ window.Neurova = window.Neurova || {};
     renderCalibScreen();
   };
 
+  // Attaches the board's own circuit constants to every record. A resistance is only
+  // comparable against another taken through the same divider, so storing the divider
+  // alongside the number is what keeps a resistor swap from silently corrupting a trend.
+  function logSessionIfPossible(session){
+    if(!window.Neurova.logSession) return;
+    if(!window.Neurova.getUser || !window.Neurova.getUser()) return;
+    if(boardConfig){
+      session.fixedResistorOhms = boardConfig.fixedResistorOhms;
+      session.adcReferenceV = boardConfig.adcReferenceV;
+    }
+    window.Neurova.logSession(session).catch(() => {});
+  }
+
   function finishCalibration(result){
     clearTimeout(calibTimeoutId);
     clearInterval(calibProgressTimer);
@@ -1107,6 +1113,10 @@ window.Neurova = window.Neurova || {};
 
     if(result.ok && result.baseline !== null){
       boardBaseline = { ohms: result.baseline, source: 'measured' };
+      logSessionIfPossible({
+        type: 'calibration',
+        baselineOhms: result.baseline
+      });
       setCalibLiveValue(result.baseline);
       setResultIcon('calibIcon', 'good', false);
       setTestUnlocked(true);
@@ -1128,6 +1138,17 @@ window.Neurova = window.Neurova || {};
   function finishContactTest(result){
     clearTimeout(testTimeoutId);
     testing = false;
+
+    logSessionIfPossible({
+      type: 'contact',
+      verdict: result.verdict,
+      goodCount: result.good,
+      poorCount: result.poor,
+      noneCount: result.none,
+      avgResistanceOhms: (result.avgResistance === null ? null : result.avgResistance),
+      baselineOhms: boardBaseline ? boardBaseline.ohms : null,
+      baselineSource: boardBaseline ? boardBaseline.source : null
+    });
 
     const kind = LEVEL_KIND[result.verdict] || 'muted';
     const label = result.verdict.replace(/_/g, ' ').toLowerCase()
@@ -1201,33 +1222,74 @@ window.Neurova = window.Neurova || {};
     }
   });
 
-  // ---------------- data page: sample/simulated chart (pure SVG, no external libs) ----------------
+  // ---------------- data page: session history (pure SVG, no external libs) ----------------
+  //
+  // Shows real logged sessions when there are any, and clearly-labelled sample data when
+  // there are not, so an empty account never looks like a flat trend. Which quantity is
+  // plotted is switchable, because the sessions carry several and they are measured in
+  // different units — contact quality is a percentage, the others are resistances.
 
-  function clamp(v){ return Math.max(0, Math.min(100, v)); }
+  function fmtOhms(v){
+    if(v === null || v === undefined || !isFinite(v)) return '—';
+    if(Math.abs(v) >= 1e6) return (v / 1e6).toFixed(2) + ' MΩ';
+    if(Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + ' kΩ';
+    return Math.round(v) + ' Ω';
+  }
+  function fmtPercent(v){ return (v === null || v === undefined) ? '—' : Math.round(v) + '%'; }
+
+  const DATA_METRICS = [
+    { key: 'contact', label: 'Contact quality', from: 'contact', fixed: [0, 100], fmt: fmtPercent,
+      blurb: 'Share of samples that read as good contact. Higher is better.',
+      value: s => {
+        const total = (s.goodCount || 0) + (s.poorCount || 0) + (s.noneCount || 0);
+        return total ? (100 * (s.goodCount || 0) / total) : null;
+      } },
+    { key: 'resistance', label: 'Contact resistance', from: 'contact', fmt: fmtOhms,
+      blurb: 'Average skin resistance measured during the test. Lower usually means firmer contact.',
+      value: s => (typeof s.avgResistanceOhms === 'number' ? s.avgResistanceOhms : null) },
+    { key: 'baseline', label: 'Calibrated baseline', from: 'calibration', fmt: fmtOhms,
+      blurb: 'The personal baseline captured at each calibration. How much this moves between days is your drift.',
+      value: s => (typeof s.baselineOhms === 'number' ? s.baselineOhms : null) }
+  ];
+
+  let dataSessions = null;      // real sessions, oldest first; null when not signed in
+  let dataMetricKey = 'contact';
+  let chartPoints = [];         // { value, label, detail }
+
+  function activeMetric(){ return DATA_METRICS.find(m => m.key === dataMetricKey) || DATA_METRICS[0]; }
+
+  const CHART = { padLeft: 58, padRight: 24, padTop: 16, padBottom: 30, pointGap: 68, height: 240 };
   function easeInOutCubic(t){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
 
-  function appendDataLogRow(n, contact, signal, simulated){
-    const el = document.getElementById('dataLog');
-    const row = document.createElement('div');
-    row.className = 'log-row';
-    const tag = simulated ? '[simulated]' : '[sample]';
-    row.textContent = `Session ${n}  ${tag}  contact ${contact}  signal ${signal}`;
-    el.appendChild(row);
-    el.scrollTop = el.scrollHeight;
+  // The y-axis is derived from the data rather than fixed, since a resistance trend and a
+  // percentage cannot share one scale. Percentages keep a 0-100 frame so a good run still
+  // looks like a good run rather than being stretched to fill the panel.
+  let chartScale = { min: 0, max: 100 };
+  function computeScale(values, metric){
+    const vals = values.filter(v => typeof v === 'number' && isFinite(v));
+    if(metric.fixed) return { min: metric.fixed[0], max: metric.fixed[1] };
+    if(!vals.length) return { min: 0, max: 1 };
+    let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if(min === max){ const bump = Math.abs(min) * 0.1 || 1; min -= bump; max += bump; }
+    const pad = (max - min) * 0.15;
+    return { min: min - pad, max: max + pad };
   }
 
   function xFor(i){ return CHART.padLeft + i * CHART.pointGap; }
-  function yFor(v){ return CHART.padTop + (100 - v) / 100 * (CHART.height - CHART.padTop - CHART.padBottom); }
+  function yFor(v){
+    const span = chartScale.max - chartScale.min || 1;
+    const t = (v - chartScale.min) / span;
+    return CHART.padTop + (1 - t) * (CHART.height - CHART.padTop - CHART.padBottom);
+  }
 
-  // Renders the chart showing the first `revealCount` points fully, blended toward
-  // the next point by `frac` (0..1) — this one function drives both the initial
-  // left-to-right draw-in and each new-point extension, just with different ranges.
   function renderChart(revealCount, frac){
     const svg = document.getElementById('dataChartSvg');
-    const n = contactSeries.length;
-    if(n === 0){ svg.innerHTML = ''; return; }
+    if(!svg) return;
+    const n = chartPoints.length;
+    if(n === 0){ svg.innerHTML = ''; svg.setAttribute('viewBox', '0 0 260 240'); return; }
 
-    const width = CHART.padLeft + (n - 1) * CHART.pointGap + CHART.padRight;
+    const metric = activeMetric();
+    const width = CHART.padLeft + Math.max(0, n - 1) * CHART.pointGap + CHART.padRight;
     svg.setAttribute('viewBox', `0 0 ${Math.max(width, 260)} ${CHART.height}`);
     svg.setAttribute('width', Math.max(width, 260));
     svg.setAttribute('height', CHART.height);
@@ -1235,115 +1297,166 @@ window.Neurova = window.Neurova || {};
     const shownFull = Math.min(revealCount, n - 1);
     const hasPartial = frac > 0 && shownFull < n - 1;
 
-    function seriesPoints(series){
-      const pts = [];
-      for(let i = 0; i <= shownFull; i++) pts.push([xFor(i), yFor(series[i])]);
-      if(hasPartial){
-        const a = series[shownFull], b = series[shownFull + 1];
-        const v = a + (b - a) * frac;
-        pts.push([xFor(shownFull + frac), yFor(v)]);
-      }
-      return pts;
+    let grid = '';
+    for(let k = 0; k <= 4; k++){
+      const v = chartScale.min + (chartScale.max - chartScale.min) * (k / 4);
+      const y = yFor(v);
+      grid += `<line x1="${CHART.padLeft}" y1="${y}" x2="${Math.max(width, 260) - CHART.padRight}" y2="${y}" stroke="#e3e9e6" stroke-width="1"/>`;
+      grid += `<text x="${CHART.padLeft - 10}" y="${y + 3}" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#8fa39d">${metric.fmt(v)}</text>`;
+    }
+    for(let i = 0; i < n; i++){
+      grid += `<text x="${xFor(i)}" y="${CHART.height - 10}" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8fa39d">${chartPoints[i].label}</text>`;
     }
 
-    function pathD(pts){
-      return pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const pts = [];
+    for(let i = 0; i <= shownFull; i++) pts.push([xFor(i), yFor(chartPoints[i].value)]);
+    if(hasPartial){
+      const a = chartPoints[shownFull].value, b = chartPoints[shownFull + 1].value;
+      pts.push([xFor(shownFull + frac), yFor(a + (b - a) * frac)]);
+    }
+    const d = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    let dots = '';
+    for(let i = 0; i <= shownFull; i++){
+      dots += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.4" fill="var(--primary)"><title>${chartPoints[i].detail}</title></circle>`;
     }
 
-    function gridAndAxes(){
-      let s = '';
-      [0, 25, 50, 75, 100].forEach(v => {
-        const y = yFor(v);
-        s += `<line x1="${CHART.padLeft}" y1="${y}" x2="${width - CHART.padRight}" y2="${y}" stroke="#e3e9e6" stroke-width="1"/>`;
-        s += `<text x="${CHART.padLeft - 10}" y="${y + 3}" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#8fa39d">${v}</text>`;
-      });
-      for(let i = 0; i < n; i++){
-        s += `<text x="${xFor(i)}" y="${CHART.height - 10}" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8fa39d">S${i + 1}</text>`;
-      }
-      return s;
-    }
-
-    function circles(pts, color, upToFull){
-      let s = '';
-      for(let i = 0; i <= upToFull; i++){
-        s += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.4" fill="${color}"/>`;
-      }
-      return s;
-    }
-
-    const contactPts = seriesPoints(contactSeries);
-    const signalPts = seriesPoints(signalSeries);
-
-    svg.innerHTML =
-      gridAndAxes() +
-      `<path d="${pathD(contactPts)}" fill="none" stroke="var(--good)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` +
-      `<path d="${pathD(signalPts)}" fill="none" stroke="var(--warn)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` +
-      circles(contactPts, 'var(--good)', shownFull) +
-      circles(signalPts, 'var(--warn)', shownFull);
+    svg.innerHTML = grid +
+      `<path d="${d}" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` +
+      dots;
   }
 
-  // Animates the reveal from `fromCount` points to `toCount` points, sweeping
-  // smoothly across every segment in between.
+  let animFrame = null;
   function animateReveal(fromCount, toCount, duration){
     if(animFrame) cancelAnimationFrame(animFrame);
+    if(toCount <= 0){ renderChart(0, 0); return; }
     const start = performance.now();
     const span = toCount - fromCount;
     function frame(now){
       const t = Math.min(1, (now - start) / duration);
-      const eased = easeInOutCubic(t);
-      const current = fromCount + span * eased;
+      const current = fromCount + span * easeInOutCubic(t);
       renderChart(Math.floor(current), current - Math.floor(current));
-      if(t < 1){
-        animFrame = requestAnimationFrame(frame);
-      } else {
+      if(t < 1){ animFrame = requestAnimationFrame(frame); }
+      else {
         renderChart(toCount, 0);
         const scroller = document.getElementById('chartScroll');
-        scroller.scrollLeft = scroller.scrollWidth;
+        if(scroller) scroller.scrollLeft = scroller.scrollWidth;
       }
     }
     animFrame = requestAnimationFrame(frame);
   }
 
-  function loadSampleData(){
-    document.getElementById('dataLog').innerHTML = '';
-    sessionNum = 0;
-    contactSeries = [];
-    signalSeries = [];
-    SAMPLE_SESSIONS.forEach(s => {
-      sessionNum += 1;
-      contactSeries.push(s.contact);
-      signalSeries.push(s.signal);
-      appendDataLogRow(sessionNum, s.contact, s.signal, false);
+  const SAMPLE_SESSIONS = [
+    { type:'contact', goodCount:6, poorCount:3, noneCount:1, avgResistanceOhms: 980000, baselineOhms: 760000 },
+    { type:'contact', goodCount:7, poorCount:3, noneCount:0, avgResistanceOhms: 910000, baselineOhms: 760000 },
+    { type:'contact', goodCount:7, poorCount:2, noneCount:1, avgResistanceOhms: 870000, baselineOhms: 760000 },
+    { type:'contact', goodCount:8, poorCount:2, noneCount:0, avgResistanceOhms: 840000, baselineOhms: 745000 },
+    { type:'contact', goodCount:9, poorCount:1, noneCount:0, avgResistanceOhms: 790000, baselineOhms: 745000 },
+    { type:'calibration', baselineOhms: 760000 },
+    { type:'calibration', baselineOhms: 745000 },
+    { type:'calibration', baselineOhms: 752000 }
+  ];
+
+  function usingRealData(){ return Array.isArray(dataSessions) && dataSessions.length > 0; }
+
+  function sessionsForChart(){
+    const metric = activeMetric();
+    const source = usingRealData() ? dataSessions : SAMPLE_SESSIONS;
+    return source.filter(s => s.type === metric.from);
+  }
+
+  function rebuildChartPoints(){
+    const metric = activeMetric();
+    const rows = sessionsForChart();
+    chartPoints = rows.map((s, i) => {
+      const v = metric.value(s);
+      const when = s.atMs ? new Date(s.atMs).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : ('S' + (i + 1));
+      return { value: v, label: when, detail: metric.label + ': ' + metric.fmt(v) };
+    }).filter(p => p.value !== null && isFinite(p.value));
+    chartScale = computeScale(chartPoints.map(p => p.value), metric);
+  }
+
+  function renderMetricTabs(){
+    const wrap = document.getElementById('dataMetricTabs');
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    DATA_METRICS.forEach(m => {
+      const b = document.createElement('button');
+      b.className = 'btn ' + (m.key === dataMetricKey ? 'btn-primary' : 'btn-ghost');
+      b.textContent = m.label;
+      b.addEventListener('click', () => {
+        if(dataMetricKey === m.key) return;
+        dataMetricKey = m.key;
+        renderMetricTabs();
+        refreshDataView(true);
+      });
+      wrap.appendChild(b);
     });
   }
 
-  function initDataChart(){
-    loadSampleData();
-    renderChart(0, 0);
-    animateReveal(0, contactSeries.length - 1, 900);
+  function renderSessionLog(){
+    const el = document.getElementById('dataLog');
+    if(!el) return;
+    const rows = usingRealData() ? dataSessions : SAMPLE_SESSIONS;
+    const tag = usingRealData() ? '' : '  [sample]';
+    el.innerHTML = '';
+    rows.slice().reverse().forEach(s => {
+      const when = s.atMs ? new Date(s.atMs).toLocaleString() : '—';
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      row.textContent = s.type === 'calibration'
+        ? `${when}  calibration  baseline ${fmtOhms(s.baselineOhms)}${tag}`
+        : `${when}  contact  ${String(s.verdict || '').toLowerCase() || 'n/a'}  avg ${fmtOhms(s.avgResistanceOhms)}${tag}`;
+      el.appendChild(row);
+    });
   }
 
-  document.getElementById('addSessionBtn').addEventListener('click', () => {
-    if(contactSeries.length === 0) return;
-    const prevCount = contactSeries.length - 1;
-    sessionNum += 1;
-    const lastContact = contactSeries[contactSeries.length - 1];
-    const lastSignal = signalSeries[signalSeries.length - 1];
-    // simulate a mostly-improving trend with some natural noise
-    const newContact = clamp(Math.round(lastContact + (Math.random() * 8 - 2)));
-    const newSignal = clamp(Math.round(lastSignal + (Math.random() * 7 - 1)));
-    contactSeries.push(newContact);
-    signalSeries.push(newSignal);
-    appendDataLogRow(sessionNum, newContact, newSignal, true);
-    animateReveal(prevCount, contactSeries.length - 1, 550);
-  });
+  function refreshDataView(animate){
+    const metric = activeMetric();
+    rebuildChartPoints();
+    renderSessionLog();
 
-  document.getElementById('resetDataBtn').addEventListener('click', () => {
-    loadSampleData();
-    renderChart(0, 0);
-    animateReveal(0, contactSeries.length - 1, 900);
-  });
+    const src = document.getElementById('dataSourceLabel');
+    if(src){
+      src.textContent = usingRealData()
+        ? chartPoints.length + ' logged session' + (chartPoints.length === 1 ? '' : 's')
+        : 'sample data — nothing logged yet';
+    }
+    const blurb = document.getElementById('dataMetricBlurb');
+    if(blurb) blurb.textContent = metric.blurb;
 
+    const empty = document.getElementById('dataEmpty');
+    if(empty) empty.hidden = chartPoints.length > 0;
+
+    // requestAnimationFrame does not run while the page is hidden, so an animated reveal
+    // started in a background tab would never paint and the chart would sit showing
+    // whatever was there before. Draw straight away in that case.
+    if(animate && chartPoints.length > 1 && !document.hidden) animateReveal(0, chartPoints.length - 1, 700);
+    else renderChart(chartPoints.length - 1, 0);
+  }
+
+  // Pulls the account's own history. Kept separate from rendering so a failed or slow
+  // read leaves the page showing something rather than nothing.
+  //
+  // Auth changes and manual refreshes can both start a load, so two can be in flight at
+  // once — and whichever finishes last would otherwise win regardless of which was asked
+  // for last. The token means a superseded load discards its own result instead of
+  // overwriting newer data, which is what made a signed-in page fall back to sample data.
+  let dataLoadToken = 0;
+  async function initDataChart(){
+    const token = ++dataLoadToken;
+    renderMetricTabs();
+    refreshDataView(false);
+
+    const rows = window.Neurova.loadSessions ? await window.Neurova.loadSessions(200) : null;
+    if(token !== dataLoadToken) return;
+
+    dataSessions = rows;
+    refreshDataView(true);
+  }
+  window.Neurova.refreshDataPage = () => { if(dataChartReady) initDataChart(); };
+
+  const refreshBtn = document.getElementById('refreshDataBtn');
+  if(refreshBtn) refreshBtn.addEventListener('click', () => initDataChart());
 })();
 
 // ---------------- account / authentication ----------------
@@ -1437,6 +1550,46 @@ window.Neurova = window.Neurova || {};
     }
   }
   window.Neurova.retryLoadCalibration = () => loadSavedCalibrationForCurrentUser();
+
+  // ---------------- session history ----------------
+  //
+  // Every calibration and contact test is a dated record under the signed-in user, in the
+  // subcollection the security rule's {document=**} wildcard already covers. Writes are
+  // fire-and-forget: a session that fails to save must never interrupt a test that has
+  // already been run on someone's arm.
+  window.Neurova.logSession = async function(session){
+    if(!firebaseReady || !currentUser || !db) return false;
+    try{
+      await db.collection('users').doc(currentUser.uid).collection('sessions').add(
+        Object.assign({}, session, { at: firebase.firestore.FieldValue.serverTimestamp() })
+      );
+      return true;
+    }catch(e){
+      console.error('Logging session failed:', e);
+      return false;
+    }
+  };
+
+  // Returns oldest-first for charting, or null when there is no account to read from —
+  // which the Data page needs to tell apart from an account that simply has no sessions.
+  window.Neurova.loadSessions = async function(max){
+    if(!firebaseReady || !currentUser || !db) return null;
+    try{
+      const snap = await db.collection('users').doc(currentUser.uid).collection('sessions')
+        .orderBy('at', 'desc').limit(max || 200).get();
+      const out = [];
+      snap.forEach(doc => {
+        const d = doc.data();
+        out.push(Object.assign({ id: doc.id }, d, {
+          atMs: (d.at && typeof d.at.toMillis === 'function') ? d.at.toMillis() : null
+        }));
+      });
+      return out.reverse();
+    }catch(e){
+      console.error('Loading sessions failed:', e);
+      return null;
+    }
+  };
 
   function friendlyAuthError(code){
     const map = {
@@ -1849,6 +2002,8 @@ window.Neurova = window.Neurova || {};
       // brand-new account" transition gets to keep a just-measured baseline.
       const guestToNewAccount = (previousUid === null) && (newUid !== null);
       if(window.Neurova.resetCalibration) window.Neurova.resetCalibration(guestToNewAccount);
+      // Signing in or out changes whose history the Data page should be showing.
+      if(window.Neurova.refreshDataPage) window.Neurova.refreshDataPage();
       if(user) loadSavedCalibrationForCurrentUser();
     });
   } else {

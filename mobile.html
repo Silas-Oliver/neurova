@@ -508,25 +508,21 @@
   <section>
     <div class="wrap" style="padding-top:56px; padding-bottom:56px;">
       <div class="section-head">
-        <h2>Recovery data (preview)</h2>
-        <p>There's no real session storage wired up yet — this page is a preview of what tracking sessions over time will look like once it is.</p>
-      </div>
-      <div class="data-note">
-        The chart below starts with sample data. Nothing here is a real reading — use "Add simulated session" to see how a new logged session would move the trend line.
+        <h2>Recovery data</h2>
+        <p>Every calibration and contact test you run while signed in is saved to your account with the date and the circuit it was measured through. This is that history.</p>
       </div>
       <div id="dataAuthBanner"></div>
-      <div class="data-toolbar">
-        <button class="btn btn-primary" id="addSessionBtn">Add simulated session</button>
-        <button class="btn btn-ghost" id="resetDataBtn">Reset sample data</button>
-      </div>
+      <div class="data-toolbar" id="dataMetricTabs"></div>
       <div class="data-chart-wrap">
-        <div class="chart-legend">
-          <span class="legend-item"><span class="legend-dot" style="background:var(--good);"></span>Contact quality</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--warn);"></span>Signal strength index</span>
+        <div class="chart-head">
+          <span class="chart-source mono" id="dataSourceLabel">sample data</span>
+          <button class="btn btn-ghost btn-small" id="refreshDataBtn">Refresh</button>
         </div>
+        <p class="chart-blurb" id="dataMetricBlurb"></p>
         <div class="chart-scroll" id="chartScroll">
           <svg id="dataChartSvg"></svg>
         </div>
+        <p class="chart-empty" id="dataEmpty" hidden>No sessions of this kind yet — run one from the Test menu and it will appear here.</p>
       </div>
       <p style="color:var(--muted); font-size:12px; margin-top:14px;">Session log</p>
       <div class="mini-feed mono" id="dataLog" style="max-height:160px;"></div>

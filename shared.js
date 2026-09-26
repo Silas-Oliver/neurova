@@ -464,20 +464,23 @@ window.Neurova = window.Neurova || {};
                                               // separate from the plot line, so a quick flex's peak doesn't get
                                               // blunted by the smoothing that makes the plot look nice
   const EMG_HUMP_STDDEV_MULTIPLE = 3;        // still used to size the fixed Y-axis, not to decide movement
-  const EMG_MIN_STDDEV_FLOOR = 5;            // guards against a suspiciously flat capture making detection oversensitive
+  const EMG_MIN_STDDEV_FLOOR = 0.5;          // one ADC count is the smallest real difference; anything below that is quantisation
   // Rise measured across a short window rather than between consecutive samples: a single
   // sample-to-sample step is mostly noise, while ~150ms is about the timescale a real
   // contraction's leading edge takes to develop.
-  const EMG_SLOPE_WINDOW_SAMPLES = 6;        // ~150ms at 25ms/sample
+  // Longer window than the onset itself needs, because the signal is only a couple of
+  // counts tall: a wider window accumulates more of the rise while quantisation noise
+  // stays put, which is the only way to separate the two at this amplitude.
+  const EMG_SLOPE_WINDOW_SAMPLES = 12;       // ~300ms at 25ms/sample
   const EMG_SLOPE_STDDEV_MULTIPLE = 4;       // how many resting-slope std-devs counts as a sudden change
-  const EMG_MIN_SLOPE_FLOOR = 3;             // ADC counts across the window; stops a very quiet rest triggering on noise
+  const EMG_MIN_SLOPE_FLOOR = 1;             // ADC counts across the window; one count is the resolution limit
   const EMG_MOVEMENT_HOLD_MS = 600;          // an onset is an instant — keep the readout lit long enough to read
   const EMG_REFRACTORY_MS = 400;             // one contraction is one event, not a burst of them
   // How tall the fixed Y-axis is. Scaling it purely to the baseline's own std-dev zooms
   // right in on a quiet signal, so ordinary resting noise fills the plot and everything
   // looks frantic. The floor keeps the view wide enough that rest reads as a flat band and
   // a real contraction is the thing that stands out.
-  const EMG_AXIS_MIN_SPAN = 100;             // ADC counts — minimum height of the plotted range
+  const EMG_AXIS_MIN_SPAN = 20;              // ADC counts — minimum height of the plotted range
   const EMG_AXIS_STDDEV_SPAN = 16;           // for a noisier baseline, size the range from its std-dev instead
   const EMG_AXIS_HEADROOM = 0.75;            // share of the range that sits above the baseline, since flexes only go up
 

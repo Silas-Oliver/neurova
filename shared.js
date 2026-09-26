@@ -576,7 +576,7 @@ window.Neurova = window.Neurova || {};
       // Resting rise is the yardstick: whatever the signal does on its own while you hold
       // still is what a deliberate movement has to clearly out-climb.
       if(rise !== null){ emgBaselineSlopes.push(rise); }
-      emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset: false });
+      emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset: false, inEvent: false });
       if(emgPlotPoints.length > EMG_PLOT_MAX_POINTS){ emgPlotPoints.shift(); }
       if(liveValueEl){ liveValueEl.textContent = raw; }
       drawEmgCanvas();
@@ -603,7 +603,7 @@ window.Neurova = window.Neurova || {};
       if(emgDetectValue <= returnLevel) emgInEvent = false;
     }
 
-    emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset });
+    emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset, inEvent: emgInEvent });
     if(emgPlotPoints.length > EMG_PLOT_MAX_POINTS){ emgPlotPoints.shift(); }
 
     setEmgMovementUI(emgInEvent || now < emgMovementUntil);
@@ -735,27 +735,35 @@ window.Neurova = window.Neurova || {};
     // Canvas needs a resolved color, not CSS variable syntax — pull the site's actual
     // "good" color from the stylesheet so this matches the rest of the theme automatically.
     const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--good').trim() || '#4ade80';
+    const restColor = 'rgba(255,255,255,0.55)';
     drawLine('raw', 'rgba(255,255,255,0.25)', 1);  // faint raw signal
-    drawLine('smoothed', accentColor, 2);           // smoothed line on top
 
-    // A marker at each detected onset — the point of the whole exercise is seeing exactly
-    // where the signal was judged to have taken off, so it can be checked against what the
-    // hand was actually doing at that instant.
-    //
-    // Drawn as a dot sitting on the trace rather than a full-height rule: a line spanning
-    // the plot dominates it once several are on screen, and it also points at a moment in
-    // time without saying anything about where on the curve the onset actually happened.
-    // A short tick at the top keeps each one findable when the trace is near the floor.
-    const warnColor = getComputedStyle(document.documentElement).getPropertyValue('--warn').trim() || '#d98a3d';
-    emgPlotPoints.forEach((p, i) => {
-      if(!p.onset) return;
-      const x = toX(i);
-      const y = toY(p.smoothed);
-      ctx.beginPath();
-      ctx.fillStyle = warnColor;
-      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    // The smoothed trace is drawn in runs rather than one path, so the stretch the board
+    // judged to be a contraction is green and everything else is neutral. Colouring the
+    // span says more than a marker at the onset did — it shows how long the contraction
+    // lasted, not just when it began — and it annotates the plot without adding anything
+    // on top of it to crowd the view.
+    if(emgPlotPoints.length >= 2){
+      let runStart = 0;
+      for(let i = 1; i <= emgPlotPoints.length; i++){
+        const atEnd = (i === emgPlotPoints.length);
+        const changed = !atEnd && (!!emgPlotPoints[i].inEvent !== !!emgPlotPoints[runStart].inEvent);
+        if(!atEnd && !changed) continue;
+
+        ctx.beginPath();
+        ctx.strokeStyle = emgPlotPoints[runStart].inEvent ? accentColor : restColor;
+        ctx.lineWidth = 2;
+        // Start one sample early so consecutive runs join up instead of leaving gaps.
+        const from = Math.max(0, runStart - 1);
+        for(let j = from; j < i; j++){
+          const x = toX(j), y = toY(emgPlotPoints[j].smoothed);
+          if(j === from) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        runStart = i;
+      }
+    }
+
   }
 
   function setVerdict(text, kind, summary){

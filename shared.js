@@ -485,9 +485,9 @@ window.Neurova = window.Neurova || {};
   // right in on a quiet signal, so ordinary resting noise fills the plot and everything
   // looks frantic. The floor keeps the view wide enough that rest reads as a flat band and
   // a real contraction is the thing that stands out.
-  const EMG_AXIS_MIN_SPAN = 20;              // ADC counts — minimum height of the plotted range
+  const EMG_AXIS_MIN_SPAN = 12;              // ADC counts — minimum height of the plotted range
   const EMG_AXIS_STDDEV_SPAN = 16;           // for a noisier baseline, size the range from its std-dev instead
-  const EMG_AXIS_HEADROOM = 0.75;            // share of the range that sits above the baseline, since flexes only go up
+  const EMG_AXIS_HEADROOM = 0.6;             // share of the range that sits above the baseline, since flexes only go up
 
   let emgStreamingActive = false;
   let emgPhase = 'idle';  // 'idle' | 'baseline' | 'live'
@@ -684,9 +684,16 @@ window.Neurova = window.Neurova || {};
     emgYAxisMin = Math.max(0, mean - (axisSpan * (1 - EMG_AXIS_HEADROOM)));
     emgYAxisMax = Math.min(1023, mean + (axisSpan * EMG_AXIS_HEADROOM));
 
+    // Prefill the plot at the resting level so the trace spans the full width from the
+    // first live sample onward. Starting from an empty buffer drew a partial line that
+    // grew in from the left and left the panel looking unfinished for the first few
+    // seconds, and again briefly after every restart.
     emgPlotPoints = [];
-    emgSmoothedValue = null;
-    emgDetectValue = null;
+    for(let i = 0; i < EMG_PLOT_MAX_POINTS; i++){
+      emgPlotPoints.push({ raw: mean, smoothed: mean, onset: false, inEvent: false });
+    }
+    emgSmoothedValue = mean;
+    emgDetectValue = mean;
     emgDetectHistory = [];
     emgLastOnsetAt = 0;
     emgMovementUntil = 0;
@@ -727,7 +734,7 @@ window.Neurova = window.Neurova || {};
       if(maxV - minV < 10){ maxV += 5; minV -= 5; }
     }
     const toY = v => h - ((v - minV) / (maxV - minV)) * h;
-    const toX = i => (i / (EMG_PLOT_MAX_POINTS - 1)) * w;
+    const toX = i => 1 + (i / (EMG_PLOT_MAX_POINTS - 1)) * (w - 2);
 
     if(emgPhase === 'live' && emgBaselineMean !== null){
       ctx.beginPath();

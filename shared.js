@@ -475,7 +475,7 @@ window.Neurova = window.Neurova || {};
   const EMG_SLOPE_STDDEV_MULTIPLE = 4;       // how many resting-slope std-devs counts as a sudden change
   const EMG_MIN_SLOPE_FLOOR = 1;             // ADC counts across the window; one count is the resolution limit
   const EMG_MOVEMENT_HOLD_MS = 600;          // an onset is an instant — keep the readout lit long enough to read
-  const EMG_REFRACTORY_MS = 400;             // one contraction is one event, not a burst of them
+  const EMG_REFRACTORY_MS = 700;             // one contraction is one event, not a burst of them
   // How tall the fixed Y-axis is. Scaling it purely to the baseline's own std-dev zooms
   // right in on a quiet signal, so ordinary resting noise fills the plot and everything
   // looks frantic. The floor keeps the view wide enough that rest reads as a flat band and
@@ -722,16 +722,28 @@ window.Neurova = window.Neurova || {};
     // A marker at each detected onset — the point of the whole exercise is seeing exactly
     // where the signal was judged to have taken off, so it can be checked against what the
     // hand was actually doing at that instant.
+    //
+    // Drawn as a dot sitting on the trace rather than a full-height rule: a line spanning
+    // the plot dominates it once several are on screen, and it also points at a moment in
+    // time without saying anything about where on the curve the onset actually happened.
+    // A short tick at the top keeps each one findable when the trace is near the floor.
     const warnColor = getComputedStyle(document.documentElement).getPropertyValue('--warn').trim() || '#d98a3d';
     emgPlotPoints.forEach((p, i) => {
       if(!p.onset) return;
       const x = toX(i);
+      const y = toY(p.smoothed);
+
       ctx.beginPath();
       ctx.strokeStyle = warnColor;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1;
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
+      ctx.lineTo(x, 8);
       ctx.stroke();
+
+      ctx.beginPath();
+      ctx.fillStyle = warnColor;
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
     });
   }
 

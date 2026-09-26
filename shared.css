@@ -123,6 +123,10 @@
   /* Tighter than the hero scope: that one is a hero and can breathe, this one is an
      instrument panel being read while working, so the numbers sit close to the trace. */
   .emg-scope{margin-top:4px; padding:16px 18px 14px;}
+  /* The canvas draws its own grid so it can scroll. Two grids — one static from the
+     panel, one scrolling on the canvas — cannot line up with each other, so the panel
+     does not draw one here. */
+  .emg-scope::before{display:none;}
   .emg-scope canvas{
     position:relative;
     display:block;

@@ -550,6 +550,7 @@ window.Neurova = window.Neurova || {};
     const canvas = document.getElementById('emgCanvas');
     if(canvas){
       const ctx = canvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     setEmgMovementUI(false);
@@ -720,8 +721,21 @@ window.Neurova = window.Neurova || {};
   function drawEmgCanvas(){
     const canvas = document.getElementById('emgCanvas');
     if(!canvas || emgPlotPoints.length === 0) return;
+    // The canvas element was a fixed 600x150 backing store stretched to whatever width
+    // the panel happens to be, so every line on it was resampled and came out soft. Size
+    // the backing store to the element's real size times the display's pixel ratio, and
+    // scale the context to match, so a pixel drawn is a pixel shown.
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    const backingW = Math.round(w * dpr), backingH = Math.round(h * dpr);
+    if(canvas.width !== backingW || canvas.height !== backingH){
+      canvas.width = backingW;
+      canvas.height = backingH;
+    }
     const ctx = canvas.getContext('2d');
-    const w = canvas.width, h = canvas.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // reset each frame; resizing clears it
     ctx.clearRect(0, 0, w, h);
 
     // The panel's CSS grid is static, which made a resting trace indistinguishable from a

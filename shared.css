@@ -226,32 +226,53 @@
   .screen-title{font-size:22px; margin-bottom:8px;}
   .screen-sub{color:var(--muted); font-size:14px; max-width:48ch; margin-bottom:26px;}
 
-  /* Four real tests in a balanced 2x2; the bench tool sits apart underneath, so the grid
-     has no orphaned fifth cell and the dev tool does not read as a fifth test. */
-  .menu-options{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:auto;}
-  .menu-option{
-    text-align:left; background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--radius);
-    padding:16px 18px; cursor:pointer; transition:border-color 0.15s ease, background 0.15s ease;
+  /* The tests are a sequence, not a set of equal choices — a contact test means nothing
+     without a calibration behind it. So they read as one numbered list rather than a grid
+     of identical cards, matching the 01/02/03 step list on the Calibrate screen. It is
+     also far denser: the grid pushed four boxes into the middle of a 340px panel and left
+     most of it empty. */
+  .test-list{
+    border:1px solid var(--line-strong); border-radius:var(--radius);
+    overflow:hidden; background:var(--panel);
   }
-  .menu-option:hover:not(:disabled){border-color:var(--primary); background:#fbfcfb;}
-  .menu-option h3{font-size:16px; margin-bottom:5px;}
-  .menu-option p{margin:0; color:var(--muted); font-size:13px; line-height:1.5;}
+  .test-row{
+    display:flex; align-items:baseline; gap:16px; width:100%;
+    text-align:left; background:transparent; border:0; border-top:1px solid var(--line);
+    padding:14px 18px; cursor:pointer; transition:background 0.15s ease;
+  }
+  .test-row:first-child{border-top:0;}
+  .test-row:hover:not(:disabled){background:#f4f7f5;}
+  .test-row:disabled{cursor:default;}
 
-  /* The order matters — a contact test means nothing without a calibration behind it —
-     so the sequence is on the cards rather than only implied by their position. */
-  .menu-step{
-    display:block; font-family:'IBM Plex Mono', monospace; font-size:10px;
-    letter-spacing:0.08em; color:var(--primary); margin-bottom:7px;
+  .test-idx{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--primary);
+    flex:0 0 auto; width:22px;
   }
-  .menu-option:disabled{cursor:default; opacity:0.75;}
-  .menu-option.is-planned{background:transparent; border-style:dashed;}
-  .menu-option.is-planned .menu-step{color:var(--muted);}
+  .test-body{display:flex; flex-direction:column; gap:3px; flex:1; min-width:0;}
+  .test-name{font-size:15px; font-weight:600; color:var(--ink);}
+  .test-desc{font-size:13px; color:var(--muted); line-height:1.5;}
 
-  .menu-option-aside{
-    display:block; width:100%; margin-top:14px; margin-bottom:auto;
-    background:transparent; border-color:var(--line);
+  /* Status is derived from the button's own state rather than stored anywhere, so it can
+     never drift out of step with whether the row is actually clickable. */
+  .test-status{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.07em;
+    flex:0 0 auto; color:var(--muted); white-space:nowrap;
   }
-  .menu-option-aside h3{font-size:14px;}
+  .test-row:not(:disabled) .test-status::after{content:"READY"; color:var(--primary);}
+  .test-row:disabled .test-status::after{content:"LOCKED";}
+  .test-row.is-planned .test-status::after{content:"NOT BUILT";}
+  .test-row.is-planned .test-idx,
+  .test-row.is-planned .test-name{color:var(--muted); font-weight:500;}
+
+  .test-row-aside{
+    margin-top:12px; border:1px dashed var(--line-strong); border-radius:var(--radius);
+  }
+  .test-row-aside .test-idx{color:var(--muted);}
+  .test-row-aside .test-name{font-weight:500;}
+
+  /* Content sits under the heading and the actions go to the bottom, instead of the list
+     floating in the middle of the panel. */
+  .screen[data-screen="MENU"] .screen-actions{margin-top:auto;}
 
   .readout-row{display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap;}
   .verdict-box{
@@ -348,8 +369,7 @@
   }
   .mini-feed div{opacity:0.9; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
-  .menu-option:disabled, .menu-option[disabled]{opacity:0.45; cursor:not-allowed;}
-  .menu-option:disabled:hover, .menu-option[disabled]:hover{border-color:var(--line-strong);}
+  .test-row:disabled .test-name, .test-row:disabled .test-desc{opacity:0.7;}
 
 
   .screen-actions{display:flex; gap:12px; margin-top:28px;}
@@ -398,7 +418,8 @@
   @media (max-width: 860px){
     .hero-grid{grid-template-columns:1fr;}
     .how-grid{grid-template-columns:1fr;}
-    .menu-options{grid-template-columns:1fr;}
+    .test-row{flex-wrap:wrap; gap:8px 14px;}
+    .test-row .test-status{order:3; margin-left:38px;}
     .specs{grid-template-columns:1fr;}
     .topnav{display:none;}
     .hamburger{display:flex;}

@@ -309,31 +309,47 @@
           <div class="screen" data-screen="MENU">
             <h3 class="screen-title">Menu</h3>
             <p class="screen-sub">Choose what to run. Esc returns here from either screen.</p>
-            <div class="menu-options">
-              <button class="menu-option" id="goCalibrateBtn">
-                <span class="menu-step">STEP 1</span>
-                <h3>Calibrate</h3>
-                <p>Place the electrodes at your best contact, then capture your personal baseline.</p>
+            <div class="test-list">
+              <button class="test-row" id="goCalibrateBtn">
+                <span class="test-idx">01</span>
+                <span class="test-body">
+                  <span class="test-name">Calibrate</span>
+                  <span class="test-desc">Place the electrodes at your best contact, then capture your personal baseline.</span>
+                </span>
+                <span class="test-status"></span>
               </button>
-              <button class="menu-option" id="goTestBtn" disabled>
-                <span class="menu-step">STEP 2</span>
-                <h3>Contact test</h3>
-                <p id="testOptionHint">Run a calibration first to unlock this.</p>
+              <button class="test-row" id="goTestBtn" disabled>
+                <span class="test-idx">02</span>
+                <span class="test-body">
+                  <span class="test-name">Contact test</span>
+                  <span class="test-desc" id="testOptionHint">Run a calibration first to unlock this.</span>
+                </span>
+                <span class="test-status"></span>
               </button>
-              <button class="menu-option is-planned" id="goReactionBtn" disabled>
-                <span class="menu-step">NOT BUILT YET</span>
-                <h3>Reaction-time test</h3>
-                <p id="reactionOptionHint">Run a calibration first to unlock this.</p>
+              <button class="test-row is-planned" id="goReactionBtn" disabled>
+                <span class="test-idx">03</span>
+                <span class="test-body">
+                  <span class="test-name">Reaction-time test</span>
+                  <span class="test-desc" id="reactionOptionHint">Run a calibration first to unlock this.</span>
+                </span>
+                <span class="test-status"></span>
               </button>
-              <button class="menu-option is-planned" id="goBaselineBtn" disabled>
-                <span class="menu-step">NOT BUILT YET</span>
-                <h3>Baseline recording</h3>
-                <p id="baselineOptionHint">Run a calibration first to unlock this.</p>
+              <button class="test-row is-planned" id="goBaselineBtn" disabled>
+                <span class="test-idx">04</span>
+                <span class="test-body">
+                  <span class="test-name">Baseline recording</span>
+                  <span class="test-desc" id="baselineOptionHint">Run a calibration first to unlock this.</span>
+                </span>
+                <span class="test-status"></span>
               </button>
             </div>
-            <button class="menu-option menu-option-aside" id="goEmgDebugBtn">
-              <h3>EMG live view</h3>
-              <p>Bench tool &mdash; live plot of the EMG sensor. Not part of the test flow.</p>
+            <button class="test-row test-row-aside" id="goEmgDebugBtn">
+              <span class="test-idx">&mdash;</span>
+              <span class="test-body">
+                <span class="test-name">EMG live view</span>
+                <span class="test-desc">Bench tool &mdash; live plot of the EMG sensor. Not part of the test flow.</span>
+              </span>
+              <span class="test-status"></span>
             </button>
             <div class="screen-actions">
               <button class="btn btn-ghost" id="menuBackBtn">Back</button>

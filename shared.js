@@ -475,7 +475,12 @@ window.Neurova = window.Neurova || {};
   const EMG_SLOPE_STDDEV_MULTIPLE = 4;       // how many resting-slope std-devs counts as a sudden change
   const EMG_MIN_SLOPE_FLOOR = 1;             // ADC counts across the window; one count is the resolution limit
   const EMG_MOVEMENT_HOLD_MS = 600;          // an onset is an instant — keep the readout lit long enough to read
-  const EMG_REFRACTORY_MS = 700;             // one contraction is one event, not a burst of them
+  const EMG_REFRACTORY_MS = 300;             // backstop only; the excursion latch does the real work
+  // An excursion is over once the signal has fallen most of the way back toward rest.
+  // Judging the end by how far it has come down, rather than by a fixed timer, means one
+  // contraction marks once whether it lasts half a second or five, and two genuine
+  // contractions never merge just because they happened close together.
+  const EMG_EVENT_END_FRACTION = 0.3;        // share of the peak excursion left when the event ends
   // How tall the fixed Y-axis is. Scaling it purely to the baseline's own std-dev zooms
   // right in on a quiet signal, so ordinary resting noise fills the plot and everything
   // looks frantic. The floor keeps the view wide enough that rest reads as a flat band and
@@ -497,6 +502,8 @@ window.Neurova = window.Neurova || {};
   let emgSlopeThreshold = null;
   let emgLastOnsetAt = 0;
   let emgMovementUntil = 0;
+  let emgInEvent = false;        // true from an onset until the signal comes back down
+  let emgEventPeak = null;       // highest point reached during the current excursion
   let emgYAxisMin = null;
   let emgYAxisMax = null;
   let emgBaselineCountdownTimer = null;
@@ -532,6 +539,8 @@ window.Neurova = window.Neurova || {};
     emgSlopeThreshold = null;
     emgLastOnsetAt = 0;
     emgMovementUntil = 0;
+    emgInEvent = false;
+    emgEventPeak = null;
     const canvas = document.getElementById('emgCanvas');
     if(canvas){
       const ctx = canvas.getContext('2d');
@@ -578,18 +587,26 @@ window.Neurova = window.Neurova || {};
 
     const now = Date.now();
     let onset = false;
-    if(rise !== null && emgSlopeThreshold !== null
+    if(!emgInEvent && rise !== null && emgSlopeThreshold !== null
        && rise > emgSlopeThreshold
        && (now - emgLastOnsetAt) > EMG_REFRACTORY_MS){
       onset = true;
+      emgInEvent = true;
+      emgEventPeak = emgDetectValue;
       emgLastOnsetAt = now;
       emgMovementUntil = now + EMG_MOVEMENT_HOLD_MS;
+    }
+
+    if(emgInEvent){
+      if(emgDetectValue > emgEventPeak) emgEventPeak = emgDetectValue;
+      const returnLevel = emgBaselineMean + (EMG_EVENT_END_FRACTION * (emgEventPeak - emgBaselineMean));
+      if(emgDetectValue <= returnLevel) emgInEvent = false;
     }
 
     emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset });
     if(emgPlotPoints.length > EMG_PLOT_MAX_POINTS){ emgPlotPoints.shift(); }
 
-    setEmgMovementUI(now < emgMovementUntil);
+    setEmgMovementUI(emgInEvent || now < emgMovementUntil);
     if(liveValueEl){ liveValueEl.textContent = raw; }
 
     drawEmgCanvas();
@@ -662,6 +679,8 @@ window.Neurova = window.Neurova || {};
     emgDetectHistory = [];
     emgLastOnsetAt = 0;
     emgMovementUntil = 0;
+    emgInEvent = false;
+    emgEventPeak = null;
     emgPhase = 'live';
     setEmgStatusText('Baseline: ' + Math.round(mean) + ' ± ' + Math.round(stdDev) +
       ' — watching for a rise of ' + (Math.round(slopeThreshold * 10) / 10) + '+ per ' +
@@ -732,17 +751,9 @@ window.Neurova = window.Neurova || {};
       if(!p.onset) return;
       const x = toX(i);
       const y = toY(p.smoothed);
-
-      ctx.beginPath();
-      ctx.strokeStyle = warnColor;
-      ctx.lineWidth = 1;
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 8);
-      ctx.stroke();
-
       ctx.beginPath();
       ctx.fillStyle = warnColor;
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
       ctx.fill();
     });
   }

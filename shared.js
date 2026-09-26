@@ -490,9 +490,9 @@ window.Neurova = window.Neurova || {};
   // right in on a quiet signal, so ordinary resting noise fills the plot and everything
   // looks frantic. The floor keeps the view wide enough that rest reads as a flat band and
   // a real contraction is the thing that stands out.
-  const EMG_AXIS_MIN_SPAN = 20;              // ADC counts — minimum height of the plotted range
+  const EMG_AXIS_MIN_SPAN = 12;              // ADC counts — minimum height of the plotted range
   const EMG_AXIS_STDDEV_SPAN = 16;           // for a noisier baseline, size the range from its std-dev instead
-  const EMG_AXIS_HEADROOM = 0.75;            // share of the range that sits above the baseline, since flexes only go up
+  const EMG_AXIS_HEADROOM = 0.6;             // share of the range that sits above the baseline, since flexes only go up
 
   let emgStreamingActive = false;
   let emgPhase = 'idle';  // 'idle' | 'baseline' | 'live'
@@ -515,12 +515,17 @@ window.Neurova = window.Neurova || {};
   let emgBaselineFinishTimer = null;
   let emgBaselineDeadline = null;
 
+  // Scope palette, matching the home page's hero widget.
+  const SCOPE_TRACE = '#5fbf8f';       // active signal
+  const SCOPE_QUIET = '#7fa89c';       // resting signal and labels
+  const SCOPE_BRIGHT = '#eaf6f1';      // readouts
+
   function setEmgMovementUI(moving){
     setResultIcon('emgMovementIcon', moving ? 'good' : 'muted', moving);
     const textEl = document.getElementById('emgMovementText');
     if(textEl){
       textEl.textContent = moving ? 'Movement' : 'Resting';
-      textEl.style.setProperty('--accent', moving ? 'var(--good)' : 'var(--muted)');
+      textEl.style.color = moving ? SCOPE_TRACE : SCOPE_BRIGHT;
     }
   }
 
@@ -549,9 +554,16 @@ window.Neurova = window.Neurova || {};
     const canvas = document.getElementById('emgCanvas');
     if(canvas){
       const ctx = canvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     setEmgMovementUI(false);
+    ['emgBaselineStat', 'emgThresholdStat'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = '—';
+    });
+    const phaseLabel = document.getElementById('emgPhaseLabel');
+    if(phaseLabel) phaseLabel.textContent = 'BENCH TOOL';
     setEmgStatusText('Stay relaxed, then capture a baseline to start.');
     const liveValueEl = document.getElementById('emgLiveValue');
     if(liveValueEl){ liveValueEl.textContent = '—'; }
@@ -679,15 +691,30 @@ window.Neurova = window.Neurova || {};
     emgYAxisMin = Math.max(0, mean - (axisSpan * (1 - EMG_AXIS_HEADROOM)));
     emgYAxisMax = Math.min(1023, mean + (axisSpan * EMG_AXIS_HEADROOM));
 
+    // Prefill the plot at the resting level so the trace spans the full width from the
+    // first live sample onward. Starting from an empty buffer drew a partial line that
+    // grew in from the left and left the panel looking unfinished for the first few
+    // seconds, and again briefly after every restart.
     emgPlotPoints = [];
-    emgSmoothedValue = null;
-    emgDetectValue = null;
+    for(let i = 0; i < EMG_PLOT_MAX_POINTS; i++){
+      emgPlotPoints.push({ raw: mean, smoothed: mean, onset: false, inEvent: false });
+    }
+    emgSmoothedValue = mean;
+    emgDetectValue = mean;
     emgDetectHistory = [];
     emgLastOnsetAt = 0;
     emgMovementUntil = 0;
     emgInEvent = false;
     emgEventPeak = null;
     emgPhase = 'live';
+    const baseStat = document.getElementById('emgBaselineStat');
+    if(baseStat) baseStat.textContent = Math.round(mean) + ' ± ' + Math.round(stdDev);
+    const thrStat = document.getElementById('emgThresholdStat');
+    if(thrStat) thrStat.textContent = '+' + (Math.round(slopeThreshold * 10) / 10) + ' / ' +
+      Math.round(EMG_SLOPE_WINDOW_SAMPLES * EMG_STREAM_EXPECTED_INTERVAL_MS) + 'ms';
+    const phaseLabel = document.getElementById('emgPhaseLabel');
+    if(phaseLabel) phaseLabel.textContent = 'WATCHING';
+
     setEmgStatusText('Baseline: ' + Math.round(mean) + ' ± ' + Math.round(stdDev) +
       ' — watching for a rise of ' + (Math.round(slopeThreshold * 10) / 10) + '+ per ' +
       Math.round(EMG_SLOPE_WINDOW_SAMPLES * EMG_STREAM_EXPECTED_INTERVAL_MS) + 'ms.');
@@ -698,8 +725,21 @@ window.Neurova = window.Neurova || {};
   function drawEmgCanvas(){
     const canvas = document.getElementById('emgCanvas');
     if(!canvas || emgPlotPoints.length === 0) return;
+    // The canvas element was a fixed 600x150 backing store stretched to whatever width
+    // the panel happens to be, so every line on it was resampled and came out soft. Size
+    // the backing store to the element's real size times the display's pixel ratio, and
+    // scale the context to match, so a pixel drawn is a pixel shown.
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    const backingW = Math.round(w * dpr), backingH = Math.round(h * dpr);
+    if(canvas.width !== backingW || canvas.height !== backingH){
+      canvas.width = backingW;
+      canvas.height = backingH;
+    }
     const ctx = canvas.getContext('2d');
-    const w = canvas.width, h = canvas.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // reset each frame; resizing clears it
     ctx.clearRect(0, 0, w, h);
 
     let minV, maxV;
@@ -714,19 +754,9 @@ window.Neurova = window.Neurova || {};
       if(maxV - minV < 10){ maxV += 5; minV -= 5; }
     }
     const toY = v => h - ((v - minV) / (maxV - minV)) * h;
-    const toX = i => (i / (EMG_PLOT_MAX_POINTS - 1)) * w;
+    const toX = i => 1 + (i / (EMG_PLOT_MAX_POINTS - 1)) * (w - 2);
 
-    if(emgPhase === 'live' && emgBaselineMean !== null){
-      ctx.beginPath();
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = 1;
-      const baselineY = toY(emgBaselineMean);
-      ctx.moveTo(0, baselineY);
-      ctx.lineTo(w, baselineY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+
 
     const drawLine = (key, color, lineWidth) => {
       ctx.beginPath();
@@ -740,9 +770,9 @@ window.Neurova = window.Neurova || {};
     };
     // Canvas needs a resolved color, not CSS variable syntax — pull the site's actual
     // "good" color from the stylesheet so this matches the rest of the theme automatically.
-    const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--good').trim() || '#4ade80';
-    const restColor = 'rgba(255,255,255,0.55)';
-    drawLine('raw', 'rgba(255,255,255,0.25)', 1);  // faint raw signal
+    const accentColor = SCOPE_TRACE;
+    const restColor = SCOPE_QUIET;
+    drawLine('raw', 'rgba(255,255,255,0.30)', 1);  // raw signal — its jitter is the other cue that this is live
 
     // The smoothed trace is drawn in runs rather than one path, so the stretch the board
     // judged to be a contraction is green and everything else is neutral. Colouring the
@@ -769,6 +799,21 @@ window.Neurova = window.Neurova || {};
         runStart = i;
       }
     }
+
+    // Drawn last, on top of the trace. Underneath it was invisible exactly when it
+    // mattered most — at rest, where the trace sits on the baseline and hid it.
+    if(emgPhase === 'live' && emgBaselineMean !== null){
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(234,246,241,0.55)';
+      ctx.lineWidth = 1;
+      const baselineY = toY(emgBaselineMean);
+      ctx.moveTo(0, baselineY);
+      ctx.lineTo(w, baselineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
 
   }
 
@@ -799,6 +844,7 @@ window.Neurova = window.Neurova || {};
   // ---------------- shared result icon ----------------
   function setResultIcon(elId, kind, pulsing){
     const el = document.getElementById(elId);
+    if(!el) return;   // some layouts show state as text alone, with no icon
     el.classList.toggle('pulsing', !!pulsing);
     const colors = {
       good: 'rgba(63,143,95,0.85)',

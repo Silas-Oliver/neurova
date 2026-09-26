@@ -510,12 +510,17 @@ window.Neurova = window.Neurova || {};
   let emgBaselineFinishTimer = null;
   let emgBaselineDeadline = null;
 
+  // Scope palette, matching the home page's hero widget.
+  const SCOPE_TRACE = '#5fbf8f';       // active signal
+  const SCOPE_QUIET = '#7fa89c';       // resting signal and labels
+  const SCOPE_BRIGHT = '#eaf6f1';      // readouts
+
   function setEmgMovementUI(moving){
     setResultIcon('emgMovementIcon', moving ? 'good' : 'muted', moving);
     const textEl = document.getElementById('emgMovementText');
     if(textEl){
       textEl.textContent = moving ? 'Movement' : 'Resting';
-      textEl.style.setProperty('--accent', moving ? 'var(--good)' : 'var(--muted)');
+      textEl.style.color = moving ? SCOPE_TRACE : SCOPE_BRIGHT;
     }
   }
 
@@ -547,6 +552,12 @@ window.Neurova = window.Neurova || {};
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     setEmgMovementUI(false);
+    ['emgBaselineStat', 'emgThresholdStat'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = '—';
+    });
+    const phaseLabel = document.getElementById('emgPhaseLabel');
+    if(phaseLabel) phaseLabel.textContent = 'BENCH TOOL';
     setEmgStatusText('Stay relaxed, then capture a baseline to start.');
     const liveValueEl = document.getElementById('emgLiveValue');
     if(liveValueEl){ liveValueEl.textContent = '—'; }
@@ -682,6 +693,14 @@ window.Neurova = window.Neurova || {};
     emgInEvent = false;
     emgEventPeak = null;
     emgPhase = 'live';
+    const baseStat = document.getElementById('emgBaselineStat');
+    if(baseStat) baseStat.textContent = Math.round(mean) + ' ± ' + Math.round(stdDev);
+    const thrStat = document.getElementById('emgThresholdStat');
+    if(thrStat) thrStat.textContent = '+' + (Math.round(slopeThreshold * 10) / 10) + ' / ' +
+      Math.round(EMG_SLOPE_WINDOW_SAMPLES * EMG_STREAM_EXPECTED_INTERVAL_MS) + 'ms';
+    const phaseLabel = document.getElementById('emgPhaseLabel');
+    if(phaseLabel) phaseLabel.textContent = 'WATCHING';
+
     setEmgStatusText('Baseline: ' + Math.round(mean) + ' ± ' + Math.round(stdDev) +
       ' — watching for a rise of ' + (Math.round(slopeThreshold * 10) / 10) + '+ per ' +
       Math.round(EMG_SLOPE_WINDOW_SAMPLES * EMG_STREAM_EXPECTED_INTERVAL_MS) + 'ms.');
@@ -713,7 +732,7 @@ window.Neurova = window.Neurova || {};
     if(emgPhase === 'live' && emgBaselineMean !== null){
       ctx.beginPath();
       ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.strokeStyle = 'rgba(234,246,241,0.35)';
       ctx.lineWidth = 1;
       const baselineY = toY(emgBaselineMean);
       ctx.moveTo(0, baselineY);
@@ -734,9 +753,9 @@ window.Neurova = window.Neurova || {};
     };
     // Canvas needs a resolved color, not CSS variable syntax — pull the site's actual
     // "good" color from the stylesheet so this matches the rest of the theme automatically.
-    const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--good').trim() || '#4ade80';
-    const restColor = 'rgba(255,255,255,0.55)';
-    drawLine('raw', 'rgba(255,255,255,0.25)', 1);  // faint raw signal
+    const accentColor = SCOPE_TRACE;
+    const restColor = SCOPE_QUIET;
+    drawLine('raw', 'rgba(255,255,255,0.18)', 1);  // faint raw signal, kept under the grid's weight
 
     // The smoothed trace is drawn in runs rather than one path, so the stretch the board
     // judged to be a contraction is green and everything else is neutral. Colouring the
@@ -793,6 +812,7 @@ window.Neurova = window.Neurova || {};
   // ---------------- shared result icon ----------------
   function setResultIcon(elId, kind, pulsing){
     const el = document.getElementById(elId);
+    if(!el) return;   // some layouts show state as text alone, with no icon
     el.classList.toggle('pulsing', !!pulsing);
     const colors = {
       good: 'rgba(63,143,95,0.85)',

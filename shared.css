@@ -117,6 +117,24 @@
   .scope-stat{font-family:'IBM Plex Mono', monospace; font-size:11px; color:#7fa89c;}
   .scope-stat b{display:block; color:#eaf6f1; font-size:15px; font-weight:500; margin-top:3px;}
 
+  /* EMG live view, borrowing the hero scope's instrument look. The canvas sits above the
+     grid rather than covering it, so the trace reads against graph paper the way the
+     home-page widget does. */
+  .emg-scope{margin-top:4px;}
+  .emg-scope .scope-value{font-size:34px; margin-top:10px;}
+  .emg-scope canvas{
+    position:relative;
+    display:block;
+    width:100%; height:180px;
+    margin-top:12px;
+    background:transparent;
+  }
+  .emg-scope .scope-caption{
+    position:relative;
+    margin:14px 0 0;
+    font-size:11px; line-height:1.6; color:#7fa89c;
+  }
+
   /* ---------- section shared ---------- */
   section{padding:56px 0;}
   .section-head{max-width:56ch; margin-bottom:36px;}

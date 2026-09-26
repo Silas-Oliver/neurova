@@ -507,6 +507,7 @@ window.Neurova = window.Neurova || {};
   let emgSlopeThreshold = null;
   let emgLastOnsetAt = 0;
   let emgMovementUntil = 0;
+  let emgSampleCount = 0;        // advances the baseline's dashes, so a flat trace still reads as live
   let emgInEvent = false;        // true from an onset until the signal comes back down
   let emgEventPeak = null;       // highest point reached during the current excursion
   let emgYAxisMin = null;
@@ -621,6 +622,7 @@ window.Neurova = window.Neurova || {};
       if(declining || emgDetectValue <= returnLevel) emgInEvent = false;
     }
 
+    emgSampleCount++;
     emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset, inEvent: emgInEvent });
     if(emgPlotPoints.length > EMG_PLOT_MAX_POINTS){ emgPlotPoints.shift(); }
 
@@ -802,9 +804,22 @@ window.Neurova = window.Neurova || {};
 
     // Drawn last, on top of the trace. Underneath it was invisible exactly when it
     // mattered most — at rest, where the trace sits on the baseline and hid it.
+    //
+    // Its dashes travel with the data, at the same pixels-per-sample the trace scrolls
+    // at, which gives back the motion the scrolling grid was there for. A steady signal
+    // no longer looks like a frozen one, and unlike the grid this cannot fall out of
+    // alignment with anything — it is one line the canvas already owns.
     if(emgPhase === 'live' && emgBaselineMean !== null){
+      // The gap is deliberately three times the dash. A sample advances the pattern by
+      // w/199 pixels — near 4 — so an 8px period would step half a period per frame and
+      // read as flicker rather than travel, the same aliasing that makes wagon wheels
+      // appear to spin backwards. A 16px period puts each step at about a quarter, which
+      // reads as motion in an unambiguous direction.
+      const DASH = 4, GAP = 12;
+      const pxPerSample = w / (EMG_PLOT_MAX_POINTS - 1);
       ctx.beginPath();
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash([DASH, GAP]);
+      ctx.lineDashOffset = (emgSampleCount * pxPerSample) % (DASH + GAP);
       ctx.strokeStyle = 'rgba(234,246,241,0.55)';
       ctx.lineWidth = 1;
       const baselineY = toY(emgBaselineMean);
@@ -812,6 +827,7 @@ window.Neurova = window.Neurova || {};
       ctx.lineTo(w, baselineY);
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
     }
 
 

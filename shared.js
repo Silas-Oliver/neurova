@@ -502,6 +502,7 @@ window.Neurova = window.Neurova || {};
   let emgSlopeThreshold = null;
   let emgLastOnsetAt = 0;
   let emgMovementUntil = 0;
+  let emgSampleCount = 0;        // drives the scrolling gridlines, so a flat trace still reads as live
   let emgInEvent = false;        // true from an onset until the signal comes back down
   let emgEventPeak = null;       // highest point reached during the current excursion
   let emgYAxisMin = null;
@@ -614,6 +615,7 @@ window.Neurova = window.Neurova || {};
       if(emgDetectValue <= returnLevel) emgInEvent = false;
     }
 
+    emgSampleCount++;
     emgPlotPoints.push({ raw, smoothed: emgSmoothedValue, onset, inEvent: emgInEvent });
     if(emgPlotPoints.length > EMG_PLOT_MAX_POINTS){ emgPlotPoints.shift(); }
 
@@ -722,6 +724,24 @@ window.Neurova = window.Neurova || {};
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
+    // The panel's CSS grid is static, which made a resting trace indistinguishable from a
+    // frozen one. The canvas paints its own copy of that grid instead — same 22px pitch
+    // and weight, so it reads as continuous with the panel — but scrolls the vertical
+    // lines with the data. A flat signal then still visibly flows.
+    const GRID = 22;
+    ctx.fillStyle = '#132622';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for(let y = GRID; y < h; y += GRID){
+      ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(w, y + 0.5); ctx.stroke();
+    }
+    const pxPerSample = w / (EMG_PLOT_MAX_POINTS - 1);
+    const scrollOffset = (emgSampleCount * pxPerSample) % GRID;
+    for(let x = -scrollOffset; x < w; x += GRID){
+      ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h); ctx.stroke();
+    }
+
     let minV, maxV;
     if(emgPhase === 'live' && emgYAxisMin !== null && emgYAxisMax !== null){
       minV = emgYAxisMin;
@@ -736,17 +756,7 @@ window.Neurova = window.Neurova || {};
     const toY = v => h - ((v - minV) / (maxV - minV)) * h;
     const toX = i => 1 + (i / (EMG_PLOT_MAX_POINTS - 1)) * (w - 2);
 
-    if(emgPhase === 'live' && emgBaselineMean !== null){
-      ctx.beginPath();
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = 'rgba(234,246,241,0.35)';
-      ctx.lineWidth = 1;
-      const baselineY = toY(emgBaselineMean);
-      ctx.moveTo(0, baselineY);
-      ctx.lineTo(w, baselineY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+
 
     const drawLine = (key, color, lineWidth) => {
       ctx.beginPath();
@@ -762,7 +772,7 @@ window.Neurova = window.Neurova || {};
     // "good" color from the stylesheet so this matches the rest of the theme automatically.
     const accentColor = SCOPE_TRACE;
     const restColor = SCOPE_QUIET;
-    drawLine('raw', 'rgba(255,255,255,0.18)', 1);  // faint raw signal, kept under the grid's weight
+    drawLine('raw', 'rgba(255,255,255,0.30)', 1);  // raw signal — its jitter is the other cue that this is live
 
     // The smoothed trace is drawn in runs rather than one path, so the stretch the board
     // judged to be a contraction is green and everything else is neutral. Colouring the
@@ -789,6 +799,21 @@ window.Neurova = window.Neurova || {};
         runStart = i;
       }
     }
+
+    // Drawn last, on top of the trace. Underneath it was invisible exactly when it
+    // mattered most — at rest, where the trace sits on the baseline and hid it.
+    if(emgPhase === 'live' && emgBaselineMean !== null){
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(234,246,241,0.55)';
+      ctx.lineWidth = 1;
+      const baselineY = toY(emgBaselineMean);
+      ctx.moveTo(0, baselineY);
+      ctx.lineTo(w, baselineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
 
   }
 

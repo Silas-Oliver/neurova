@@ -139,6 +139,86 @@
     font-size:11px; line-height:1.5; color:#7fa89c;
   }
 
+  /* ---------- full-screen sign-in ---------- */
+  /* Signed out on the Account page, the site chrome steps aside and the page becomes a
+     dedicated sign-in: form on the left, artwork on the right. Both classes are required,
+     so being signed out never strips the nav from the rest of the site. */
+  body.auth-fullscreen.on-account .topbar,
+  body.auth-fullscreen.on-account .mobile-nav-panel,
+  body.auth-fullscreen.on-account footer{display:none !important;}
+  body.auth-fullscreen.on-account{background:#141311;}
+  body.auth-fullscreen.on-account #page-account section{padding:0;}
+  /* Every .wrap in the chain, not just the one inside the page: the site's outer
+     container caps content at 1120px and centres it, which would box the sign-in page
+     instead of letting it fill the viewport. Only the account page is visible in this
+     mode, so widening them all is safe. */
+  body.auth-fullscreen.on-account .wrap{
+    max-width:none !important; padding:0 !important; margin:0 !important; width:100% !important;
+  }
+  body.auth-fullscreen.on-account #page-account .section-head{display:none;}
+
+  .auth-split{
+    position:relative;
+    display:grid; grid-template-columns:1fr 1fr; gap:40px;
+    min-height:100vh; align-items:center;
+    padding:30px 40px;
+    background:#141311; color:#f3f0ea;
+  }
+  .auth-brand{
+    position:absolute; top:26px; left:40px;
+    display:flex; align-items:center; gap:8px;
+    font-size:17px; font-weight:600; color:#f3f0ea;
+    cursor:pointer; text-decoration:none;
+  }
+  .auth-brand .brand-mark{width:20px; height:20px; color:var(--primary);}
+
+  .auth-split-form{width:100%; max-width:380px; margin:0 auto; text-align:center;}
+  .auth-headline{
+    font-size:42px; line-height:1.1; font-weight:400; letter-spacing:-0.01em;
+    margin:0 0 12px; color:#f7f5f0;
+  }
+  .auth-tagline{margin:0 0 30px; font-size:15px; color:#a8a29a;}
+
+  /* The card itself keeps its markup and handlers; only its skin changes. */
+  .auth-split .auth-card{
+    background:#1e1c19; border:1px solid #2e2b27; border-radius:12px;
+    padding:20px; text-align:left;
+  }
+  .auth-split .auth-sub{color:#a8a29a; font-size:13px; margin:0 0 14px; text-align:center;}
+  .auth-split .btn-google{
+    width:100%; background:#2a2724; color:#f3f0ea; border:1px solid #3a3631;
+    justify-content:center;
+  }
+  .auth-split .btn-google:hover{background:#333029;}
+  .auth-split .auth-divider{color:#78736c; font-size:11px; margin:14px 0;}
+  .auth-split .form-group label{color:#a8a29a; font-size:12px;}
+  .auth-split .form-group input{
+    background:#141311; border:1px solid #3a3631; color:#f3f0ea;
+  }
+  .auth-split .form-group input:focus{border-color:var(--primary); outline:none;}
+  .auth-split .auth-actions{margin-top:4px;}
+  .auth-split .auth-actions .btn-primary{
+    width:100%; background:#f7f5f0; color:#141311; border-color:#f7f5f0;
+  }
+  .auth-split .auth-actions .btn-primary:hover{background:#fff;}
+  .auth-split .auth-toggle{color:#a8a29a; font-size:13px; text-align:center; margin-top:14px;}
+  .auth-split .auth-toggle a{color:#f3f0ea; text-decoration:underline; cursor:pointer;}
+  .auth-split .auth-error{background:#3a2420; border-color:#5c3630; color:#f0c4bd;}
+
+  .auth-split-art{display:flex; justify-content:center; align-items:center;}
+  .auth-split-art img{
+    width:100%; max-width:620px; max-height:86vh;
+    object-fit:cover; border-radius:14px; display:block;
+  }
+
+  @media (max-width: 860px){
+    .auth-split{grid-template-columns:1fr; min-height:auto; padding:88px 20px 40px;}
+    .auth-split-art{order:-1;}
+    .auth-split-art img{max-height:38vh;}
+    .auth-headline{font-size:32px;}
+    .auth-brand{left:20px;}
+  }
+
   /* ---------- section shared ---------- */
   section{padding:56px 0;}
   .section-head{max-width:56ch; margin-bottom:36px;}

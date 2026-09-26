@@ -8,6 +8,9 @@ window.Neurova = window.Neurova || {};
   function showPage(name){
     if(!PAGES.includes(name)) name = 'home';
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('page-active', p.dataset.page === name));
+    // The sign-in page takes over the viewport, but only while it is the page on screen —
+    // being signed out must not strip the chrome from the rest of the site.
+    document.body.classList.toggle('on-account', name === 'account');
     document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === name));
     window.scrollTo(0, 0);
     history.replaceState(null, '', '#' + name);
@@ -1888,9 +1891,23 @@ window.Neurova = window.Neurova || {};
   function renderLoggedOutForm(){
     if(!accountPanel) return;
     const isSignup = authMode === 'signup';
+    // Signed out, the Account page becomes a dedicated full-screen sign-in: brand mark
+    // top left, the form in the left column, artwork in the right. The form itself and
+    // every handler below are unchanged — only the frame around them is different.
     accountPanel.innerHTML = `
+      <div class="auth-split">
+        <div class="auth-split-form">
+          <a class="auth-brand" id="authBrandHome">
+            <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="7" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="17" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M10.2 12h3.6" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span>Neurova</span>
+          </a>
+          <h2 class="auth-headline">Measure what you'd otherwise guess</h2>
+          <p class="auth-tagline">A personal record of nerve recovery, session by session</p>
       <div class="auth-card">
-        <h3>${isSignup ? 'Create an account' : 'Log in'}</h3>
         <p class="auth-sub">${isSignup ? 'A name, an email, and a password — nothing else is collected.' : 'Log in to the account you set up earlier.'}</p>
         ${authError ? `<div class="auth-error">${authError}</div>` : ''}
         <button type="button" class="btn-google" id="googleSignInBtn" ${authBusy ? 'disabled' : ''}>
@@ -1922,7 +1939,18 @@ window.Neurova = window.Neurova || {};
             ? `Already have an account? <a id="authToggle">Log in</a>`
             : `Don't have an account yet? <a id="authToggle">Create one</a>`}
         </div>
+      </div>
+        </div>
+        <div class="auth-split-art">
+          <img src="login-art.jpg" alt="" decoding="async">
+        </div>
       </div>`;
+
+    const brandHome = document.getElementById('authBrandHome');
+    if(brandHome) brandHome.addEventListener('click', () => {
+      const homeLink = document.querySelector('.topnav a[data-nav="home"], .mobile-nav-panel a[data-nav="home"]');
+      if(homeLink) homeLink.click();
+    });
 
     document.getElementById('authToggle').addEventListener('click', () => {
       authMode = isSignup ? 'login' : 'signup';
@@ -1970,6 +1998,9 @@ window.Neurova = window.Neurova || {};
 
   function renderAccountPanel(){
     if(!accountPanel) return;
+    // Drives the full-screen treatment: the site chrome steps aside for the sign-in page
+    // and comes back the moment there is an account to show.
+    document.body.classList.toggle('auth-fullscreen', !!firebaseReady && !currentUser);
     if(!firebaseReady) return renderNotConfigured();
     if(currentUser) return renderSignedIn();
     return renderLoggedOutForm();

@@ -2124,9 +2124,15 @@ window.Neurova = window.Neurova || {};
     wireBrandHome();
     document.getElementById('confirmEmailForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      authBusy = true; renderAccountPanel();
-      await finishLinkSignIn(document.getElementById('confirmEmailInput').value.trim());
+      // Read before re-rendering. Re-rendering replaces the input with a fresh, empty one,
+      // so reading afterwards submitted an empty string and Firebase correctly rejected
+      // it as not an email — which read as "your address is wrong" when it was fine.
+      const email = document.getElementById('confirmEmailInput').value.trim();
+      if(!email) return;
+      authBusy = true; authError = ''; renderAccountPanel();
+      await finishLinkSignIn(email);
       authBusy = false;
+      renderAccountPanel();
     });
   }
 
@@ -2290,7 +2296,14 @@ window.Neurova = window.Neurova || {};
       wireBrandHome();
       document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
       document.getElementById('usePasswordBtn').addEventListener('click', () => {
-        usePasswordFallback = true; authError = ''; renderAccountPanel();
+        usePasswordFallback = true;
+        authError = '';
+        // The link screen makes no distinction between signing up and signing in, so
+        // arriving here from it carries no signal about which was meant. Default to the
+        // one that can do both jobs — a new account, with the toggle to log in instead —
+        // rather than to the form that cannot create one.
+        authMode = hasAccountBefore() ? 'login' : 'signup';
+        renderAccountPanel();
       });
       document.getElementById('linkForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2348,9 +2361,18 @@ window.Neurova = window.Neurova || {};
             ? `Already have an account? <a id="authToggle">Log in</a>`
             : `Don't have an account yet? <a id="authToggle">Create one</a>`}
         </div>
+        ${isMobileLayout() ? `
+        <button type="button" class="auth-linkish" id="useLinkBtn">Use an email link instead</button>` : ''}
       </div>`);
 
     wireBrandHome();
+
+    // Without this the password form is a dead end: the button that got you here only
+    // exists on the link screen, so there was no way back to the passwordless flow.
+    const backToLink = document.getElementById('useLinkBtn');
+    if(backToLink) backToLink.addEventListener('click', () => {
+      usePasswordFallback = false; authError = ''; renderAccountPanel();
+    });
 
     document.getElementById('authToggle').addEventListener('click', () => {
       authMode = isSignup ? 'login' : 'signup';

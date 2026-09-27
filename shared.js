@@ -1967,15 +1967,15 @@ window.Neurova = window.Neurova || {};
           ${isSignup ? `
           <div class="form-group">
             <label for="authName">Name</label>
-            <input type="text" id="authName" autocomplete="name" required>
+            <input type="text" id="authName" autocomplete="name" placeholder="Your name" required>
           </div>` : ''}
           <div class="form-group">
             <label for="authEmail">Email</label>
-            <input type="email" id="authEmail" autocomplete="email" required>
+            <input type="email" id="authEmail" autocomplete="email" placeholder="Personal or work email" required>
           </div>
           <div class="form-group">
             <label for="authPassword">Password</label>
-            <input type="password" id="authPassword" autocomplete="${isSignup ? 'new-password' : 'current-password'}" required minlength="6">
+            <input type="password" id="authPassword" autocomplete="${isSignup ? 'new-password' : 'current-password'}" placeholder="Password" required minlength="6">
           </div>
           <div class="auth-actions">
             <button type="submit" class="btn btn-primary" id="authSubmitBtn" ${authBusy ? 'disabled' : ''}>

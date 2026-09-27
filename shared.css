@@ -150,8 +150,13 @@
   /* Signed out on the Account page, the site chrome steps aside and the page becomes a
      dedicated sign-in: form on the left, artwork on the right. Both classes are required,
      so being signed out never strips the nav from the rest of the site. */
+  /* All of the site chrome, not just the obvious parts. The header leaves a 1px border
+     and the version-switch link sits outside the footer, and together they were pushing
+     the mobile sign-in 28px past the screen. */
   body.auth-fullscreen.on-account .topbar,
+  body.auth-fullscreen.on-account .site-header,
   body.auth-fullscreen.on-account .mobile-nav-panel,
+  body.auth-fullscreen.on-account .version-switch,
   body.auth-fullscreen.on-account footer{display:none !important;}
   body.auth-fullscreen.on-account{background:var(--bg);}
   body.auth-fullscreen.on-account #page-account section{padding:0;}
@@ -212,13 +217,58 @@
     box-shadow:var(--shadow);
   }
 
+  /* Mobile sign-in is a single column sized to the screen rather than a scrolling page:
+     brand pinned at the top, artwork taking whatever height is left over, and the form
+     resting on the bottom edge where a thumb can reach it. */
   @media (max-width: 860px){
-    .auth-split{grid-template-columns:1fr; min-height:auto; padding:80px 20px 40px; gap:28px;}
-    .auth-split-art{order:-1; justify-content:center;}
-    .auth-split-art img{max-height:34vh;}
-    .auth-split-form{margin:0 auto;}
-    .auth-headline{font-size:34px;}
-    .auth-brand{left:20px;}
+    .auth-split{
+      display:flex; flex-direction:column; gap:0;
+      max-width:none; margin:0;
+      height:100dvh; min-height:100dvh;
+      padding:52px 20px 14px;
+      text-align:center;
+    }
+    .auth-brand{
+      position:fixed; top:14px; left:50%; transform:translateX(-50%);
+      font-size:18px;
+    }
+
+    /* The artwork absorbs the leftover space instead of setting its own height, so the
+       page fits every screen without the form being pushed off the bottom. min-height:0
+       is what lets a flex item shrink below its content size. */
+    .auth-split-art{order:1; flex:1 1 auto; min-height:90px; justify-content:center;}
+    .auth-split-art img{
+      width:auto; height:100%; max-width:100%; max-height:100%;
+      object-fit:contain; box-shadow:none;
+    }
+
+    .auth-split-form{order:2; flex:0 0 auto; width:100%; max-width:none; margin:0;}
+    .auth-headline{font-size:26px; line-height:1.15; margin:14px 0 12px;}
+    /* Dropped on mobile: with three fields in sign-up mode the page ran past the screen,
+       and the headline already says what this is. */
+    .auth-tagline{display:none;}
+
+    /* The card stops being a card — the controls sit directly on the page. */
+    .auth-split .auth-card{
+      background:transparent; border:0; box-shadow:none; padding:0;
+    }
+    .auth-split .auth-sub{display:none;}
+    .auth-split .form-group label{
+      position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);
+    }
+    .auth-split .form-group{margin-bottom:9px;}
+    .auth-split .form-group input{
+      width:100%; border-radius:999px; padding:14px 18px; font-size:15px;
+      text-align:center; background:var(--panel); border:1px solid var(--line-strong);
+    }
+    .auth-split .btn-google{
+      border-radius:999px; padding:14px 18px; font-size:15px; margin-bottom:9px;
+    }
+    .auth-split .auth-divider{margin:9px 0;}
+    .auth-split .auth-actions .btn-primary{
+      border-radius:999px; padding:14px 18px; font-size:15px;
+    }
+    .auth-split .auth-toggle{margin-top:10px; font-size:13px;}
   }
 
   /* ---------- section shared ---------- */

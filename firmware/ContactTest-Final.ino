@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-27f float-vs-blocked";
+const char FIRMWARE_VERSION[] = "2026-09-27g numeric shortcuts";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -623,14 +623,77 @@ void setup() {
   Serial.println(FIRMWARE_VERSION);
   reportConfig();
   reportStatus();  // so the website knows immediately whether it has to ask for a calibration
+  printMenu();
+}
+
+// --- Numeric shortcuts -------------------------------------------------------------
+// Typing CALIBRATE and EMG_STREAM_START by hand dozens of times per debugging session is
+// its own source of errors, so single digits stand in for the commands. The full words
+// still work and remain what the website sends; this is purely a convenience for the
+// Serial Monitor. Kept in PROGMEM because RAM is the scarce resource on this board, not
+// flash. 0 repeats whatever ran last, which is the one most worth having during a
+// tighten-something-and-measure-again loop.
+const char CMD_1[] PROGMEM = "CALIBRATE";
+const char CMD_2[] PROGMEM = "TEST";
+const char CMD_3[] PROGMEM = "DIAG";
+const char CMD_4[] PROGMEM = "STATUS";
+const char CMD_5[] PROGMEM = "EMG";
+const char CMD_6[] PROGMEM = "EMG_STREAM_START";
+const char CMD_7[] PROGMEM = "EMG_STREAM_STOP";
+const char CMD_8[] PROGMEM = "VERSION";
+const char CMD_9[] PROGMEM = "FORGET";
+const char *const DIGIT_COMMANDS[] PROGMEM = {
+  CMD_1, CMD_2, CMD_3, CMD_4, CMD_5, CMD_6, CMD_7, CMD_8, CMD_9
+};
+
+char lastCommand[20] = "";
+
+void printMenu() {
+  Serial.println(F("--- COMMANDS ---"));
+  Serial.println(F("  1 CALIBRATE        6 EMG_STREAM_START"));
+  Serial.println(F("  2 TEST             7 EMG_STREAM_STOP"));
+  Serial.println(F("  3 DIAG             8 VERSION"));
+  Serial.println(F("  4 STATUS           9 FORGET (clears saved baseline)"));
+  Serial.println(F("  5 EMG              0 repeat last"));
+  Serial.println(F("  SETBASELINE:<ohms> | MENU"));
+}
+
+// Turns a bare digit into the command it stands for, leaving anything else untouched.
+String expandCommand(String input) {
+  if (input.length() != 1) return input;
+  char c = input.charAt(0);
+
+  if (c == '0') {
+    if (lastCommand[0] == '\0') {
+      Serial.println(F("Nothing to repeat yet."));
+      return "";
+    }
+    Serial.print(F("Repeating: "));
+    Serial.println(lastCommand);
+    return String(lastCommand);
+  }
+
+  if (c < '1' || c > '9') return input;
+  char buf[20];
+  strcpy_P(buf, (char *)pgm_read_word(&DIGIT_COMMANDS[c - '1']));
+  Serial.print(F("> "));
+  Serial.println(buf);
+  return String(buf);
 }
 
 void loop() {
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim();
+    input = expandCommand(input);
+    // Remembered before dispatch so 0 repeats the command even if it fails partway.
+    if (input.length() > 0 && input.length() < sizeof(lastCommand)) {
+      input.toCharArray(lastCommand, sizeof(lastCommand));
+    }
 
-    if (input == "CALIBRATE") {
+    if (input == "MENU" || input == "?") {
+      printMenu();
+    } else if (input == "CALIBRATE") {
       runCalibration();
     } else if (input == "TEST") {
       if (!isCalibrated) {

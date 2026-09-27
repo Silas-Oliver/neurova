@@ -1671,6 +1671,10 @@ window.Neurova = window.Neurova || {};
       'auth/invalid-action-code': "That sign-in link has already been used, or it expired. Ask for a new one.",
       'auth/expired-action-code': "That sign-in link expired. Ask for a new one.",
       'auth/user-disabled': "That account has been disabled.",
+      // Firebase's no-cost plan allows 5 email-link sign-ins per day across the whole
+      // project. Nothing is broken when this happens and waiting is the only cure, so the
+      // message points at the two routes that have no such limit.
+      'auth/quota-exceeded': "Email sign-in links have run out for today — the free Firebase plan allows five a day. Use Google, or a password, until it resets.",
       'auth/requires-recent-login': "Please sign in again before making that change.",
       'neurova/timeout': "That's taking much longer than it should — check your connection and try again."
     };
@@ -2240,6 +2244,12 @@ window.Neurova = window.Neurova || {};
           onboardStep = 2;
         }catch(err){
           authError = reportAuthError('sendSignInLinkToEmail', err);
+          // No number of retries fixes a daily quota, so switch to the form that still
+          // works instead of leaving them on the one that cannot.
+          if(lastAuthErrorCode === 'auth/quota-exceeded'){
+            usePasswordFallback = true;
+            authMode = hasAccountBefore() ? 'login' : 'signup';
+          }
         }
         authBusy = false;
         renderAccountPanel();

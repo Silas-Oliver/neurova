@@ -1719,6 +1719,14 @@ window.Neurova = window.Neurova || {};
   // returns to an existing one is the same action either way. Passwords still exist --
   // an account can set one during onboarding and use it through the fallback below --
   // but nothing requires one to get in.
+  // Passwordless email-link sign-in is built and working, but switched off: Firebase's
+  // no-cost plan allows only five of these a day for the entire project, which is not
+  // enough to put in front of anyone. Everything it needs is still here — the send, the
+  // wait screen, the return handler, the different-device confirmation and the onboarding
+  // steps. Flip this to true to bring it back, which is worth doing if the project ever
+  // moves to the Blaze plan, where the same limit is 25,000 a day.
+  const PASSWORDLESS_SIGNIN_ENABLED = false;
+
   const EMAIL_FOR_LINK_KEY = 'neurovaEmailForSignIn';
   // Shown on the wait screen so the message can be found when it is filtered. Update this
   // if the sender is ever changed in the Firebase console.
@@ -1737,9 +1745,10 @@ window.Neurova = window.Neurova || {};
     return document.body.classList.contains('force-mobile')
       || window.matchMedia('(max-width: 860px)').matches;
   }
-  // Mobile gets the link flow; desktop keeps the password form it already had.
+  // Mobile gets the link flow when it is enabled; desktop keeps the password form either
+  // way. With the flag off, every layout falls through to the password form.
   function useLinkFlow(){
-    return isMobileLayout() && !usePasswordFallback;
+    return PASSWORDLESS_SIGNIN_ENABLED && isMobileLayout() && !usePasswordFallback;
   }
 
   // Where the emailed link lands. It must come back to a page that runs this script, and
@@ -1761,6 +1770,8 @@ window.Neurova = window.Neurova || {};
 
   // Runs on load. Returns true when the current URL is a sign-in link we handled, so the
   // caller knows not to route the visitor anywhere else first.
+  // Deliberately not gated on the flag. A link already sitting in someone's inbox should
+  // still sign them in, and this only does anything when the URL actually carries a code.
   async function completeEmailLinkSignIn(){
     if(!auth || !auth.isSignInWithEmailLink || !auth.isSignInWithEmailLink(location.href)) return false;
 
@@ -2402,7 +2413,7 @@ window.Neurova = window.Neurova || {};
             ? `Already have an account? <a id="authToggle">Log in</a>`
             : `Don't have an account yet? <a id="authToggle">Create one</a>`}
         </div>
-        ${isMobileLayout() ? `
+        ${(PASSWORDLESS_SIGNIN_ENABLED && isMobileLayout()) ? `
         <button type="button" class="auth-linkish" id="useLinkBtn">Use an email link instead</button>` : ''}
       </div>`);
 

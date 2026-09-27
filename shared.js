@@ -1662,9 +1662,41 @@ window.Neurova = window.Neurova || {};
       'auth/cancelled-popup-request': "That sign-in attempt was cancelled — try again.",
       'auth/account-exists-with-different-credential': "This email is already used with a different sign-in method — try logging in with a password instead.",
       'auth/unauthorized-domain': "This site's domain isn't authorized for Google sign-in yet in the Firebase console.",
+      // The email-link flow has its own failure modes, and every one of them was landing
+      // on the generic fallback — which said nothing about what to actually fix.
+      'auth/operation-not-allowed': "Email link sign-in isn't switched on for this project yet — enable it under Authentication, Sign-in method, Email/Password.",
+      'auth/unauthorized-continue-uri': "This site's domain isn't on Firebase's authorized domains list — add it under Authentication, Settings, Authorized domains.",
+      'auth/invalid-continue-uri': "The return address for the sign-in link isn't valid.",
+      'auth/missing-continue-uri': "No return address was given for the sign-in link.",
+      'auth/invalid-action-code': "That sign-in link has already been used, or it expired. Ask for a new one.",
+      'auth/expired-action-code': "That sign-in link expired. Ask for a new one.",
+      'auth/user-disabled': "That account has been disabled.",
+      'auth/requires-recent-login': "Please sign in again before making that change.",
       'neurova/timeout': "That's taking much longer than it should — check your connection and try again."
     };
     return map[code] || "Something went wrong. Please try again.";
+  }
+
+  // Keeps the exact code alongside the readable message. A generic "something went wrong"
+  // hid a specific, fixable cause more than once while building this, and the code is the
+  // part that says which one it was.
+  let lastAuthErrorCode = '';
+  function reportAuthError(where, err){
+    lastAuthErrorCode = (err && err.code) || '';
+    console.error('[neurova auth] ' + where, {
+      code: lastAuthErrorCode,
+      message: err && err.message,
+      href: location.href,
+      storedEmail: (function(){ try{ return localStorage.getItem(EMAIL_FOR_LINK_KEY); }catch(e){ return '(unavailable)'; } })()
+    });
+    return friendlyAuthError(lastAuthErrorCode);
+  }
+
+  function authErrorBlock(){
+    if(!authError) return '';
+    return `<div class="auth-error">${esc(authError)}` +
+      (lastAuthErrorCode ? `<span class="auth-error-code">${esc(lastAuthErrorCode)}</span>` : '') +
+      `</div>`;
   }
 
   function initials(name){
@@ -1754,7 +1786,7 @@ window.Neurova = window.Neurova || {};
       authError = '';
     }catch(err){
       authFlow = 'credentials';
-      authError = friendlyAuthError(err.code);
+      authError = reportAuthError('signInWithEmailLink', err);
       renderAccountPanel();
     }
   }
@@ -1789,7 +1821,7 @@ window.Neurova = window.Neurova || {};
       // onAuthStateChanged will re-render on success
     } catch(err){
       authBusy = false;
-      authError = friendlyAuthError(err.code);
+      authError = reportAuthError('auth', err);
       renderAccountPanel();
     }
   }
@@ -2090,7 +2122,7 @@ window.Neurova = window.Neurova || {};
     if(resend) resend.addEventListener('click', async () => {
       authBusy = true; authError = ''; renderAccountPanel();
       try{ await sendSignInLink(pendingEmail); }
-      catch(err){ authError = friendlyAuthError(err.code); }
+      catch(err){ authError = reportAuthError('resendSignInLink', err); }
       authBusy = false; renderAccountPanel();
     });
     document.getElementById('changeEmailBtn').addEventListener('click', () => {
@@ -2107,7 +2139,7 @@ window.Neurova = window.Neurova || {};
       <div class="auth-card auth-card-standalone">
         <h3 class="auth-card-title">Confirm your email</h3>
         <p class="auth-sub">You opened the link on a different device. Enter the address you asked for it with.</p>
-        ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+        ${authErrorBlock()}
         <form id="confirmEmailForm">
           <div class="form-group">
             <label for="confirmEmailInput">Email</label>
@@ -2178,7 +2210,7 @@ window.Neurova = window.Neurova || {};
         ${onboardDots()}
         <h2 class="auth-headline">Set a password</h2>
         <p class="auth-tagline">Optional — you can always sign in by email link instead.</p>
-        ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+        ${authErrorBlock()}
         <div class="auth-card auth-card-standalone">
           <form id="onboardPasswordForm">
             <div class="form-group">
@@ -2207,7 +2239,7 @@ window.Neurova = window.Neurova || {};
           await currentUser.updatePassword(pw);
           onboardStep = 2;
         }catch(err){
-          authError = friendlyAuthError(err.code);
+          authError = reportAuthError('sendSignInLinkToEmail', err);
         }
         authBusy = false;
         renderAccountPanel();
@@ -2219,7 +2251,7 @@ window.Neurova = window.Neurova || {};
       ${onboardDots()}
       <h2 class="auth-headline">What's your name?</h2>
       <p class="auth-tagline">Used to label your own sessions — nothing else.</p>
-      ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+      ${authErrorBlock()}
       <div class="auth-card auth-card-standalone">
         <form id="onboardNameForm">
           <div class="form-group">
@@ -2257,7 +2289,7 @@ window.Neurova = window.Neurova || {};
         if(window.Neurova.goToPage) window.Neurova.goToPage('home');
         return;
       }catch(err){
-        authError = friendlyAuthError(err.code);
+        authError = reportAuthError('auth', err);
       }
       authBusy = false;
       renderAccountPanel();
@@ -2274,7 +2306,7 @@ window.Neurova = window.Neurova || {};
       accountPanel.innerHTML = authShell(`
         <h2 class="auth-headline">Progress you can see, not just feel</h2>
         <div class="auth-card">
-          ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+          ${authErrorBlock()}
           <button type="button" class="btn-google" id="googleSignInBtn" ${authBusy ? 'disabled' : ''}>
             ${GOOGLE_ICON_SVG}<span>Continue with Google</span>
           </button>
@@ -2313,7 +2345,7 @@ window.Neurova = window.Neurova || {};
           pendingEmail = email;
           authFlow = 'linkSent';
         }catch(err){
-          authError = friendlyAuthError(err.code);
+          authError = reportAuthError('auth', err);
         }
         authBusy = false;
         renderAccountPanel();
@@ -2330,7 +2362,7 @@ window.Neurova = window.Neurova || {};
         <p class="auth-tagline">A personal record of nerve recovery, session by session</p>
       <div class="auth-card">
         <p class="auth-sub">${isSignup ? 'A name, an email, and a password — nothing else is collected.' : 'Log in to the account you set up earlier.'}</p>
-        ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+        ${authErrorBlock()}
         <button type="button" class="btn-google" id="googleSignInBtn" ${authBusy ? 'disabled' : ''}>
           ${GOOGLE_ICON_SVG}<span>Continue with Google</span>
         </button>
@@ -2411,7 +2443,7 @@ window.Neurova = window.Neurova || {};
         // onAuthStateChanged also re-renders on success; harmless if it fires again
       } catch(err){
         authBusy = false;
-        authError = friendlyAuthError(err.code);
+        authError = reportAuthError('auth', err);
         renderLoggedOutForm();
       }
     });

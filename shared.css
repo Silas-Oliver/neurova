@@ -231,6 +231,13 @@
 
   /* A button that reads as a link — used for the escape hatches (change email, skip,
      use a password) so they never compete with the primary action. */
+  /* The exact code, kept next to the message. Small and quiet, but it is the difference
+     between "something went wrong" and knowing which setting to change. */
+  .auth-error-code{
+    display:block; margin-top:5px;
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; opacity:0.75;
+  }
+
   .auth-linkish{
     display:block; width:100%; margin-top:12px; padding:6px;
     background:none; border:0; cursor:pointer;

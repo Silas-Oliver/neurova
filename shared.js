@@ -33,6 +33,7 @@ window.Neurova = window.Neurova || {};
   });
 
   showPage((location.hash || '#home').slice(1));
+  window.Neurova.goToPage = showPage;
 
   // ---------------- mobile hamburger nav ----------------
   const hamburgerBtn = document.getElementById('hamburgerBtn');
@@ -1511,6 +1512,46 @@ window.Neurova = window.Neurova || {};
     }
   }
 
+  // Two different questions, and only one of them Firebase can answer while signed out.
+  // Whether someone is signed in right now is auth state; whether they have ever had an
+  // account is not, so it is remembered here. That is what decides whether a signed-out
+  // visitor should be met with the sign-up form or the log-in form.
+  const HAS_ACCOUNT_KEY = 'neurovaHasAccount';
+  const AUTH_REDIRECT_KEY = 'neurovaAuthRedirected';
+
+  function rememberHasAccount(){
+    try{ localStorage.setItem(HAS_ACCOUNT_KEY, '1'); }catch(e){ /* storage unavailable */ }
+  }
+  function hasAccountBefore(){
+    try{ return localStorage.getItem(HAS_ACCOUNT_KEY) === '1'; }catch(e){ return false; }
+  }
+
+  let initialAuthResolved = false;
+  let sentToSignIn = false;   // true when this visit was routed to the account page
+
+  // Runs once, on the first auth state Firebase reports after it has checked for a
+  // persisted session. Signed in, the visitor is left wherever they were heading. Signed
+  // out, they are sent to sign in -- to sign-up if this browser has never seen an account,
+  // to log-in if it has.
+  function routeOnFirstResolve(user){
+    if(user){ rememberHasAccount(); return; }
+
+    // Once per browser session, so navigating back to Home does not bounce them again.
+    let already = false;
+    try{ already = sessionStorage.getItem(AUTH_REDIRECT_KEY) === '1'; }catch(e){}
+    if(already) return;
+    try{ sessionStorage.setItem(AUTH_REDIRECT_KEY, '1'); }catch(e){}
+
+    // A shared link to a specific page is a deliberate destination; don't hijack it.
+    const landing = (location.hash || '#home').slice(1);
+    if(landing !== 'home' && landing !== '') return;
+
+    authMode = hasAccountBefore() ? 'login' : 'signup';
+    sentToSignIn = true;
+    renderAccountPanel();
+    if(window.Neurova.goToPage) window.Neurova.goToPage('account');
+  }
+
   window.Neurova.getUser = () => currentUser;
   window.Neurova.calibLoadFailed = () => calibLoadFailed;
 
@@ -2040,6 +2081,19 @@ window.Neurova = window.Neurova || {};
       // Signing in or out changes whose history the Data page should be showing.
       if(window.Neurova.refreshDataPage) window.Neurova.refreshDataPage();
       if(user) loadSavedCalibrationForCurrentUser();
+
+      if(!initialAuthResolved){
+        initialAuthResolved = true;
+        routeOnFirstResolve(user);
+      } else if(user){
+        rememberHasAccount();
+        // They only landed on this page because they were signed out. Now that they are
+        // not, hand them the site rather than leaving them staring at the account page.
+        if(sentToSignIn){
+          sentToSignIn = false;
+          if(window.Neurova.goToPage) window.Neurova.goToPage('home');
+        }
+      }
     });
   } else {
     renderAccountPanel();

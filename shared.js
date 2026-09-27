@@ -1675,6 +1675,89 @@ window.Neurova = window.Neurova || {};
     return (user && user.displayName) ? user.displayName : (user ? user.email : '');
   }
 
+
+  // ---------------- passwordless email link ----------------
+  //
+  // On mobile the sign-in screen asks for an email and nothing else: Firebase mails a
+  // link, following it signs the person in, and whether that creates the account or
+  // returns to an existing one is the same action either way. Passwords still exist --
+  // an account can set one during onboarding and use it through the fallback below --
+  // but nothing requires one to get in.
+  const EMAIL_FOR_LINK_KEY = 'neurovaEmailForSignIn';
+
+  // 'credentials' | 'linkSent' | 'confirmEmail'
+  let authFlow = 'credentials';
+  let usePasswordFallback = false;
+  let pendingEmail = '';
+  let onboardStep = 0;
+
+  function isMobileLayout(){
+    return document.body.classList.contains('force-mobile');
+  }
+  // Mobile gets the link flow; desktop keeps the password form it already had.
+  function useLinkFlow(){
+    return isMobileLayout() && !usePasswordFallback;
+  }
+
+  // Where the emailed link lands. It must come back to a page that runs this script, and
+  // handleCodeInApp is what makes Firebase hand the code to us rather than to its own
+  // hosted handler.
+  function linkActionSettings(){
+    return {
+      url: location.origin + location.pathname + '#account',
+      handleCodeInApp: true
+    };
+  }
+
+  async function sendSignInLink(email){
+    await auth.sendSignInLinkToEmail(email, linkActionSettings());
+    // Firebase needs the address back when the link is followed, and the link itself does
+    // not carry it — so it is stashed here and read on return.
+    try{ localStorage.setItem(EMAIL_FOR_LINK_KEY, email); }catch(e){ /* storage unavailable */ }
+  }
+
+  // Runs on load. Returns true when the current URL is a sign-in link we handled, so the
+  // caller knows not to route the visitor anywhere else first.
+  async function completeEmailLinkSignIn(){
+    if(!auth || !auth.isSignInWithEmailLink || !auth.isSignInWithEmailLink(location.href)) return false;
+
+    let email = '';
+    try{ email = localStorage.getItem(EMAIL_FOR_LINK_KEY) || ''; }catch(e){}
+
+    // Opened on a different device or browser than the one that asked for the link, so
+    // there is nothing stored. Ask for the address rather than failing.
+    if(!email){
+      authFlow = 'confirmEmail';
+      renderAccountPanel();
+      if(window.Neurova.goToPage) window.Neurova.goToPage('account');
+      return true;
+    }
+    await finishLinkSignIn(email);
+    return true;
+  }
+
+  async function finishLinkSignIn(email){
+    try{
+      await auth.signInWithEmailLink(email, location.href);
+      try{ localStorage.removeItem(EMAIL_FOR_LINK_KEY); }catch(e){}
+      // Strip the one-time code out of the address bar so a reload or a shared URL cannot
+      // replay it.
+      history.replaceState(null, '', location.pathname + '#account');
+      authFlow = 'credentials';
+      authError = '';
+    }catch(err){
+      authFlow = 'credentials';
+      authError = friendlyAuthError(err.code);
+      renderAccountPanel();
+    }
+  }
+
+  // Someone arriving by link has no display name yet, which is also what marks them as
+  // new: a Google account brings one with it and skips onboarding entirely.
+  function needsOnboarding(){
+    return !!currentUser && !currentUser.displayName;
+  }
+
   const GOOGLE_ICON_SVG = `<svg viewBox="0 0 18 18">
     <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.617z"/>
     <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
@@ -1937,8 +2020,262 @@ window.Neurova = window.Neurova || {};
     }
   }
 
+  // Shared frame for every signed-out and onboarding screen, so they cannot drift apart.
+  function authShell(inner, opts){
+    const o = opts || {};
+    return `
+      <div class="auth-split${o.minimal ? ' auth-minimal' : ''}">
+        <div class="auth-split-form">
+          <a class="auth-brand" id="authBrandHome">
+            <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="7" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="17" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M10.2 12h3.6" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span>Neurova</span>
+          </a>
+          ${inner}
+        </div>
+        ${o.minimal ? '' : `<div class="auth-split-art"><img src="login-art.jpg" alt="" decoding="async"></div>`}
+      </div>`;
+  }
+
+  function wireBrandHome(){
+    const b = document.getElementById('authBrandHome');
+    if(b) b.addEventListener('click', () => {
+      const link = document.querySelector('.topnav a[data-nav="home"], .mobile-nav-panel a[data-nav="home"]');
+      if(link) link.click();
+    });
+  }
+
+  // "Check your email" — deliberately without the artwork, so the one outstanding action
+  // is the only thing on screen.
+  function renderLinkSent(){
+    accountPanel.innerHTML = authShell(`
+      <div class="auth-card auth-card-standalone">
+        <h3 class="auth-card-title">Check your email to finish signing in</h3>
+        <div class="auth-sent-box">
+          <p class="auth-sent-label">We sent a link to</p>
+          <p class="auth-sent-email">${pendingEmail}</p>
+        </div>
+        <button type="button" class="auth-linkish" id="changeEmailBtn">Change email address</button>
+      </div>`, { minimal: true });
+    wireBrandHome();
+    document.getElementById('changeEmailBtn').addEventListener('click', () => {
+      authFlow = 'credentials';
+      authError = '';
+      renderAccountPanel();
+    });
+  }
+
+  // The link was opened somewhere other than where it was requested, so the address it
+  // was sent to is not stored here and Firebase needs it back to complete the sign-in.
+  function renderConfirmEmail(){
+    accountPanel.innerHTML = authShell(`
+      <div class="auth-card auth-card-standalone">
+        <h3 class="auth-card-title">Confirm your email</h3>
+        <p class="auth-sub">You opened the link on a different device. Enter the address you asked for it with.</p>
+        ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+        <form id="confirmEmailForm">
+          <div class="form-group">
+            <label for="confirmEmailInput">Email</label>
+            <input type="email" id="confirmEmailInput" autocomplete="email" placeholder="you@example.com" required>
+          </div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary" ${authBusy ? 'disabled' : ''}>
+              ${authBusy ? 'Signing in…' : 'Finish signing in'}
+            </button>
+          </div>
+        </form>
+      </div>`, { minimal: true });
+    wireBrandHome();
+    document.getElementById('confirmEmailForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      authBusy = true; renderAccountPanel();
+      await finishLinkSignIn(document.getElementById('confirmEmailInput').value.trim());
+      authBusy = false;
+    });
+  }
+
+  // ---------------- onboarding ----------------
+  //
+  // Only for accounts arriving without a name, which in practice means the email-link
+  // route. The password step is genuinely optional: the link is enough to sign in, and a
+  // password only exists so the fallback on the sign-in screen has something to accept.
+  const ONBOARD_STEPS = 3;
+
+  function onboardDots(){
+    let d = '';
+    for(let i = 0; i < ONBOARD_STEPS; i++){
+      d += `<span class="onboard-dot${i === onboardStep ? ' is-current' : ''}"></span>`;
+    }
+    return `<div class="onboard-dots">${d}</div>`;
+  }
+
+  function onboardFooter(){
+    return `<p class="onboard-foot">Signed in as ${currentUser.email || ''}</p>`;
+  }
+
+  function renderOnboarding(){
+    if(onboardStep === 0){
+      accountPanel.innerHTML = authShell(`
+        ${onboardDots()}
+        <h2 class="auth-headline">Let's set up your account</h2>
+        <p class="auth-tagline">Two quick things, then you're in.</p>
+        <div class="auth-card auth-card-standalone">
+          <div class="auth-actions">
+            <button type="button" class="btn btn-primary" id="onboardNext">Get started</button>
+          </div>
+        </div>
+        ${onboardFooter()}`, { minimal: true });
+      wireBrandHome();
+      document.getElementById('onboardNext').addEventListener('click', () => {
+        onboardStep = 1; renderAccountPanel();
+      });
+      return;
+    }
+
+    if(onboardStep === 1){
+      accountPanel.innerHTML = authShell(`
+        ${onboardDots()}
+        <h2 class="auth-headline">Set a password</h2>
+        <p class="auth-tagline">Optional — you can always sign in by email link instead.</p>
+        ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+        <div class="auth-card auth-card-standalone">
+          <form id="onboardPasswordForm">
+            <div class="form-group">
+              <label for="onboardPassword">Password</label>
+              <input type="password" id="onboardPassword" autocomplete="new-password" placeholder="At least 6 characters" minlength="6">
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary" ${authBusy ? 'disabled' : ''}>
+                ${authBusy ? 'Saving…' : 'Set password'}
+              </button>
+            </div>
+          </form>
+          <button type="button" class="auth-linkish" id="onboardSkip">Skip for now</button>
+        </div>
+        ${onboardFooter()}`, { minimal: true });
+      wireBrandHome();
+      document.getElementById('onboardSkip').addEventListener('click', () => {
+        authError = ''; onboardStep = 2; renderAccountPanel();
+      });
+      document.getElementById('onboardPasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pw = document.getElementById('onboardPassword').value;
+        if(!pw){ onboardStep = 2; renderAccountPanel(); return; }
+        authBusy = true; authError = ''; renderAccountPanel();
+        try{
+          await currentUser.updatePassword(pw);
+          onboardStep = 2;
+        }catch(err){
+          authError = friendlyAuthError(err.code);
+        }
+        authBusy = false;
+        renderAccountPanel();
+      });
+      return;
+    }
+
+    accountPanel.innerHTML = authShell(`
+      ${onboardDots()}
+      <h2 class="auth-headline">What's your name?</h2>
+      <p class="auth-tagline">Used to label your own sessions — nothing else.</p>
+      ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+      <div class="auth-card auth-card-standalone">
+        <form id="onboardNameForm">
+          <div class="form-group">
+            <label for="onboardName">Name</label>
+            <input type="text" id="onboardName" autocomplete="name" placeholder="Enter your full name" required>
+          </div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary" ${authBusy ? 'disabled' : ''}>
+              ${authBusy ? 'Finishing…' : 'Continue'}
+            </button>
+          </div>
+        </form>
+      </div>
+      ${onboardFooter()}`, { minimal: true });
+    wireBrandHome();
+    document.getElementById('onboardNameForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('onboardName').value.trim();
+      if(!name) return;
+      authBusy = true; authError = ''; renderAccountPanel();
+      try{
+        await currentUser.updateProfile({ displayName: name });
+        if(db){
+          db.collection('users').doc(currentUser.uid).set({
+            email: currentUser.email, name: name,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true }).catch(err => console.error('Profile write failed:', err));
+        }
+        currentUser = auth.currentUser;
+        onboardStep = 0;
+        authBusy = false;
+        renderAccountPanel();
+        renderDataAuthBanner();
+        // Onboarding done — hand them the site.
+        if(window.Neurova.goToPage) window.Neurova.goToPage('home');
+        return;
+      }catch(err){
+        authError = friendlyAuthError(err.code);
+      }
+      authBusy = false;
+      renderAccountPanel();
+    });
+  }
+
   function renderLoggedOutForm(){
     if(!accountPanel) return;
+
+    // Mobile asks for an email and nothing else. Sign-up and sign-in are the same action
+    // here — the link either returns you to an account or creates one — so there is no
+    // mode to toggle between.
+    if(useLinkFlow()){
+      accountPanel.innerHTML = authShell(`
+        <h2 class="auth-headline">Progress you can see, not just feel</h2>
+        <div class="auth-card">
+          ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+          <button type="button" class="btn-google" id="googleSignInBtn" ${authBusy ? 'disabled' : ''}>
+            ${GOOGLE_ICON_SVG}<span>Continue with Google</span>
+          </button>
+          <div class="auth-divider">or</div>
+          <form id="linkForm">
+            <div class="form-group">
+              <label for="linkEmail">Email</label>
+              <input type="email" id="linkEmail" autocomplete="email" placeholder="Personal or work email" required>
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary" ${authBusy ? 'disabled' : ''}>
+                ${authBusy ? 'Sending…' : 'Continue with email'}
+              </button>
+            </div>
+          </form>
+          <button type="button" class="auth-linkish" id="usePasswordBtn">Use a password instead</button>
+        </div>`);
+      wireBrandHome();
+      document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+      document.getElementById('usePasswordBtn').addEventListener('click', () => {
+        usePasswordFallback = true; authError = ''; renderAccountPanel();
+      });
+      document.getElementById('linkForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('linkEmail').value.trim();
+        authBusy = true; authError = ''; renderAccountPanel();
+        try{
+          await sendSignInLink(email);
+          pendingEmail = email;
+          authFlow = 'linkSent';
+        }catch(err){
+          authError = friendlyAuthError(err.code);
+        }
+        authBusy = false;
+        renderAccountPanel();
+      });
+      return;
+    }
+
     const isSignup = authMode === 'signup';
     // Signed out, the Account page becomes a dedicated full-screen sign-in: brand mark
     // top left, the form in the left column, artwork in the right. The form itself and
@@ -2047,11 +2384,14 @@ window.Neurova = window.Neurova || {};
 
   function renderAccountPanel(){
     if(!accountPanel) return;
-    // Drives the full-screen treatment: the site chrome steps aside for the sign-in page
-    // and comes back the moment there is an account to show.
-    document.body.classList.toggle('auth-fullscreen', !!firebaseReady && !currentUser);
+    // Drives the full-screen treatment. Onboarding counts too — it is still part of
+    // getting in, so the site chrome stays out of the way until it is finished.
+    const takeover = !!firebaseReady && (!currentUser || needsOnboarding());
+    document.body.classList.toggle('auth-fullscreen', takeover);
     if(!firebaseReady) return renderNotConfigured();
-    if(currentUser) return renderSignedIn();
+    if(currentUser) return needsOnboarding() ? renderOnboarding() : renderSignedIn();
+    if(authFlow === 'linkSent') return renderLinkSent();
+    if(authFlow === 'confirmEmail') return renderConfirmEmail();
     return renderLoggedOutForm();
   }
 
@@ -2076,7 +2416,7 @@ window.Neurova = window.Neurova || {};
       const previousUid = currentUser ? currentUser.uid : null;
       currentUser = user;
       const newUid = user ? user.uid : null;
-      if(!user){ authMode = 'login'; confirmingDelete = false; deleteError = ''; needsReauth = false; cachedProfile = null; calibLoadFailed = false; }
+      if(!user){ authFlow = 'credentials'; usePasswordFallback = false; onboardStep = 0; authMode = 'login'; confirmingDelete = false; deleteError = ''; needsReauth = false; cachedProfile = null; calibLoadFailed = false; }
       authError = '';
       authBusy = false;
       renderAccountPanel();
@@ -2092,7 +2432,12 @@ window.Neurova = window.Neurova || {};
 
       if(!initialAuthResolved){
         initialAuthResolved = true;
-        routeOnFirstResolve(user);
+        // Arriving on a sign-in link takes priority: it is already a destination, and
+        // routing the visitor to the sign-in page would throw the code away.
+        completeEmailLinkSignIn().then(handled => {
+          if(handled){ revealSite(); return; }
+          routeOnFirstResolve(user);
+        }).catch(() => routeOnFirstResolve(user));
       } else if(user){
         rememberHasAccount();
         // They only landed on this page because they were signed out. Now that they are

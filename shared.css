@@ -210,6 +210,37 @@
   .auth-split .auth-toggle{color:var(--muted); font-size:14px; text-align:center; margin-top:16px;}
   .auth-split .auth-toggle a{color:var(--primary); text-decoration:underline; cursor:pointer;}
 
+  /* Minimal variant: no artwork, single centred column. Used for the wait screen and
+     onboarding, where one action is the whole point of the page. */
+  .auth-minimal{grid-template-columns:1fr; max-width:520px; justify-items:center;}
+  .auth-minimal .auth-split-form{margin:0 auto; max-width:440px;}
+
+  .auth-card-standalone{margin-top:8px;}
+  .auth-card-title{font-size:22px; margin:0 0 16px; text-align:center; font-weight:600;}
+  .auth-sent-box{
+    background:var(--bg); border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:18px; text-align:center; margin-bottom:14px;
+  }
+  .auth-sent-label{margin:0 0 4px; font-size:13px; color:var(--muted);}
+  .auth-sent-email{margin:0; font-size:16px; font-weight:600; color:var(--ink); word-break:break-all;}
+
+  /* A button that reads as a link — used for the escape hatches (change email, skip,
+     use a password) so they never compete with the primary action. */
+  .auth-linkish{
+    display:block; width:100%; margin-top:12px; padding:6px;
+    background:none; border:0; cursor:pointer;
+    font:inherit; font-size:13px; color:var(--primary); text-decoration:underline;
+  }
+  .auth-linkish:hover{opacity:0.75;}
+
+  .onboard-dots{display:flex; gap:6px; justify-content:center; margin-bottom:26px;}
+  .onboard-dot{
+    width:7px; height:7px; border-radius:999px; background:var(--line-strong);
+    transition:width 0.2s ease, background 0.2s ease;
+  }
+  .onboard-dot.is-current{width:20px; background:var(--primary);}
+  .onboard-foot{margin:14px 0 0; font-size:12px; color:var(--muted); text-align:center;}
+
   .auth-split-art{display:flex; justify-content:flex-start; align-items:center;}
   .auth-split-art img{
     width:100%; max-width:560px; max-height:88vh;

@@ -139,6 +139,13 @@
     font-size:11px; line-height:1.5; color:#7fa89c;
   }
 
+  /* Paired with the inline script in <head>. Deliberately visibility rather than an
+     opacity fade: a transition can be left mid-flight if the page is not compositing when
+     it is triggered, and the failure mode there is an invisible site. Visibility is
+     binary and cannot get stuck. The gate lasts a few milliseconds, so there is nothing
+     to soften anyway, and the background still paints underneath either way. */
+  html.auth-pending body{visibility:hidden;}
+
   /* ---------- full-screen sign-in ---------- */
   /* Signed out on the Account page, the site chrome steps aside and the page becomes a
      dedicated sign-in: form on the left, artwork on the right. Both classes are required,

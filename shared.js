@@ -1526,6 +1526,13 @@ window.Neurova = window.Neurova || {};
     try{ return localStorage.getItem(HAS_ACCOUNT_KEY) === '1'; }catch(e){ return false; }
   }
 
+  // Releases the pre-paint gate from <head>. Called once routing is settled, whichever
+  // way it resolved — including when Firebase is not configured at all, since the site
+  // must never depend on an auth answer that is not coming.
+  function revealSite(){
+    document.documentElement.classList.remove('auth-pending');
+  }
+
   let initialAuthResolved = false;
   let sentToSignIn = false;   // true when this visit was routed to the account page
 
@@ -1534,22 +1541,23 @@ window.Neurova = window.Neurova || {};
   // out, they are sent to sign in -- to sign-up if this browser has never seen an account,
   // to log-in if it has.
   function routeOnFirstResolve(user){
-    if(user){ rememberHasAccount(); return; }
+    if(user){ rememberHasAccount(); revealSite(); return; }
 
     // Once per browser session, so navigating back to Home does not bounce them again.
     let already = false;
     try{ already = sessionStorage.getItem(AUTH_REDIRECT_KEY) === '1'; }catch(e){}
-    if(already) return;
+    if(already){ revealSite(); return; }
     try{ sessionStorage.setItem(AUTH_REDIRECT_KEY, '1'); }catch(e){}
 
     // A shared link to a specific page is a deliberate destination; don't hijack it.
     const landing = (location.hash || '#home').slice(1);
-    if(landing !== 'home' && landing !== '') return;
+    if(landing !== 'home' && landing !== ''){ revealSite(); return; }
 
     authMode = hasAccountBefore() ? 'login' : 'signup';
     sentToSignIn = true;
     renderAccountPanel();
     if(window.Neurova.goToPage) window.Neurova.goToPage('account');
+    revealSite();   // last, so the sign-in page is what appears rather than the home page
   }
 
   window.Neurova.getUser = () => currentUser;
@@ -2098,6 +2106,7 @@ window.Neurova = window.Neurova || {};
   } else {
     renderAccountPanel();
     renderDataAuthBanner();
+    revealSite();
   }
 })();
 

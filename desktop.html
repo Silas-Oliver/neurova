@@ -7,7 +7,19 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20260926-3">
+<link rel="stylesheet" href="shared.css?v=20260926-4">
+<script>
+  // Hold the first paint until we know whether this visitor gets the site or the sign-in
+  // page. Firebase reports auth state asynchronously, so without this the home page
+  // renders and is then replaced a moment later — visible as a flash.
+  //
+  // Set on <html> because <body> does not exist yet, and via script rather than markup so
+  // the page is never left hidden for someone with JavaScript disabled. The timeout is a
+  // floor under it: if the Firebase SDK fails to load or never answers, the site still
+  // appears rather than staying blank.
+  document.documentElement.classList.add('auth-pending');
+  setTimeout(function(){ document.documentElement.classList.remove('auth-pending'); }, 2500);
+</script>
 </head>
 <body class="force-desktop">
 
@@ -599,6 +611,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20260926-3"></script>
+<script src="shared.js?v=20260926-4"></script>
 </body>
 </html>

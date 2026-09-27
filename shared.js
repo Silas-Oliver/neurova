@@ -1684,6 +1684,9 @@ window.Neurova = window.Neurova || {};
   // an account can set one during onboarding and use it through the fallback below --
   // but nothing requires one to get in.
   const EMAIL_FOR_LINK_KEY = 'neurovaEmailForSignIn';
+  // Shown on the wait screen so the message can be found when it is filtered. Update this
+  // if the sender is ever changed in the Firebase console.
+  const LINK_SENDER_ADDRESS = 'noreply@neurova-7099b.firebaseapp.com';
 
   // 'credentials' | 'linkSent' | 'confirmEmail'
   let authFlow = 'credentials';
@@ -2058,9 +2061,26 @@ window.Neurova = window.Neurova || {};
           <p class="auth-sent-label">We sent a link to</p>
           <p class="auth-sent-email">${pendingEmail}</p>
         </div>
+        <p class="auth-sent-hint">
+          It usually arrives within a minute. <strong>Check your spam folder</strong> — sign-in
+          mail from Firebase's shared sending domain is often filtered there.
+          Look for <span class="mono">${LINK_SENDER_ADDRESS}</span>.
+        </p>
+        <div class="auth-actions">
+          <button type="button" class="btn btn-ghost" id="resendLinkBtn" ${authBusy ? 'disabled' : ''}>
+            ${authBusy ? 'Sending…' : 'Resend the link'}
+          </button>
+        </div>
         <button type="button" class="auth-linkish" id="changeEmailBtn">Change email address</button>
       </div>`, { minimal: true });
     wireBrandHome();
+    const resend = document.getElementById('resendLinkBtn');
+    if(resend) resend.addEventListener('click', async () => {
+      authBusy = true; authError = ''; renderAccountPanel();
+      try{ await sendSignInLink(pendingEmail); }
+      catch(err){ authError = friendlyAuthError(err.code); }
+      authBusy = false; renderAccountPanel();
+    });
     document.getElementById('changeEmailBtn').addEventListener('click', () => {
       authFlow = 'credentials';
       authError = '';

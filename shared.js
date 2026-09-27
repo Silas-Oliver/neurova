@@ -1686,7 +1686,7 @@ window.Neurova = window.Neurova || {};
   const EMAIL_FOR_LINK_KEY = 'neurovaEmailForSignIn';
   // Shown on the wait screen so the message can be found when it is filtered. Update this
   // if the sender is ever changed in the Firebase console.
-  const LINK_SENDER_ADDRESS = 'noreply@neurova-7099b.firebaseapp.com';
+  const LINK_SENDER_ADDRESS = 'noreply@neurovatech.me';
 
   // 'credentials' | 'linkSent' | 'confirmEmail'
   let authFlow = 'credentials';
@@ -2075,9 +2075,8 @@ window.Neurova = window.Neurova || {};
           <p class="auth-sent-email">${esc(pendingEmail)}</p>
         </div>
         <p class="auth-sent-hint">
-          It usually arrives within a minute. <strong>Check your spam folder</strong> — sign-in
-          mail from Firebase's shared sending domain is often filtered there.
-          Look for <span class="mono">${LINK_SENDER_ADDRESS}</span>.
+          It usually arrives within a minute. If you don't see it, check your spam folder —
+          look for <span class="mono">${LINK_SENDER_ADDRESS}</span>.
         </p>
         <div class="auth-actions">
           <button type="button" class="btn btn-ghost" id="resendLinkBtn" ${authBusy ? 'disabled' : ''}>

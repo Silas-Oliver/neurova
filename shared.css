@@ -280,15 +280,21 @@
 
     .auth-split-form{order:2; flex:0 0 auto; width:100%; max-width:none; margin:0;}
     .auth-headline{font-size:26px; line-height:1.15; margin:14px 0 12px;}
-    /* Dropped on mobile: with three fields in sign-up mode the page ran past the screen,
-       and the headline already says what this is. */
-    .auth-tagline{display:none;}
+    /* Dropped on the sign-in screen, where three fields in sign-up mode ran past the
+       bottom and the headline already says what the page is. Kept everywhere else: on the
+       onboarding steps the tagline carries real information, including the line that says
+       the password is optional. */
+    .auth-split:not(.auth-minimal) .auth-tagline{display:none;}
+    .auth-minimal .auth-tagline{font-size:13px; margin:0 0 18px;}
 
-    /* The card stops being a card — the controls sit directly on the page. */
-    .auth-split .auth-card{
+    /* The card stops being a card on the sign-in form, where the controls should sit
+       directly on the page. The standalone screens keep theirs — on those the card IS
+       the content, and flattening it left the wait screen and onboarding as loose text
+       on an empty page. */
+    .auth-split .auth-card:not(.auth-card-standalone){
       background:transparent; border:0; box-shadow:none; padding:0;
     }
-    .auth-split .auth-sub{display:none;}
+    .auth-split .auth-card:not(.auth-card-standalone) .auth-sub{display:none;}
     .auth-split .form-group label{
       position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);
     }

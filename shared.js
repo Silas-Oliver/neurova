@@ -1694,8 +1694,12 @@ window.Neurova = window.Neurova || {};
   let pendingEmail = '';
   let onboardStep = 0;
 
+  // Must match the CSS breakpoint, not just the mobile document. desktop.html in a narrow
+  // window gets the stacked layout from the media query, and would otherwise show it
+  // wrapped around the desktop password form.
   function isMobileLayout(){
-    return document.body.classList.contains('force-mobile');
+    return document.body.classList.contains('force-mobile')
+      || window.matchMedia('(max-width: 860px)').matches;
   }
   // Mobile gets the link flow; desktop keeps the password form it already had.
   function useLinkFlow(){
@@ -2024,6 +2028,15 @@ window.Neurova = window.Neurova || {};
   }
 
   // Shared frame for every signed-out and onboarding screen, so they cannot drift apart.
+  // These screens build markup by string, so any value a person typed has to be escaped
+  // on the way in. They are all values the signed-in user entered themselves, so nobody
+  // else is at risk — but an address containing a quote would still break the markup.
+  function esc(v){
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   function authShell(inner, opts){
     const o = opts || {};
     return `
@@ -2031,9 +2044,9 @@ window.Neurova = window.Neurova || {};
         <div class="auth-split-form">
           <a class="auth-brand" id="authBrandHome">
             <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="7" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
-              <circle cx="17" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M10.2 12h3.6" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="18" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M9 12H15" stroke="currentColor" stroke-width="1.6"/>
             </svg>
             <span>Neurova</span>
           </a>
@@ -2059,7 +2072,7 @@ window.Neurova = window.Neurova || {};
         <h3 class="auth-card-title">Check your email to finish signing in</h3>
         <div class="auth-sent-box">
           <p class="auth-sent-label">We sent a link to</p>
-          <p class="auth-sent-email">${pendingEmail}</p>
+          <p class="auth-sent-email">${esc(pendingEmail)}</p>
         </div>
         <p class="auth-sent-hint">
           It usually arrives within a minute. <strong>Check your spam folder</strong> — sign-in
@@ -2133,7 +2146,7 @@ window.Neurova = window.Neurova || {};
   }
 
   function onboardFooter(){
-    return `<p class="onboard-foot">Signed in as ${currentUser.email || ''}</p>`;
+    return `<p class="onboard-foot">Signed in as ${esc(currentUser.email)}</p>`;
   }
 
   function renderOnboarding(){
@@ -2297,22 +2310,12 @@ window.Neurova = window.Neurova || {};
     }
 
     const isSignup = authMode === 'signup';
-    // Signed out, the Account page becomes a dedicated full-screen sign-in: brand mark
-    // top left, the form in the left column, artwork in the right. The form itself and
-    // every handler below are unchanged — only the frame around them is different.
-    accountPanel.innerHTML = `
-      <div class="auth-split">
-        <div class="auth-split-form">
-          <a class="auth-brand" id="authBrandHome">
-            <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="7" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
-              <circle cx="17" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M10.2 12h3.6" stroke="currentColor" stroke-width="1.6"/>
-            </svg>
-            <span>Neurova</span>
-          </a>
-          <h2 class="auth-headline">Progress you can see, not just feel</h2>
-          <p class="auth-tagline">A personal record of nerve recovery, session by session</p>
+    // Same shell as every other signed-out screen, so the frame cannot drift between
+    // them — which is exactly how the brand mark ended up in two slightly different
+    // versions.
+    accountPanel.innerHTML = authShell(`
+        <h2 class="auth-headline">Progress you can see, not just feel</h2>
+        <p class="auth-tagline">A personal record of nerve recovery, session by session</p>
       <div class="auth-card">
         <p class="auth-sub">${isSignup ? 'A name, an email, and a password — nothing else is collected.' : 'Log in to the account you set up earlier.'}</p>
         ${authError ? `<div class="auth-error">${authError}</div>` : ''}
@@ -2345,18 +2348,9 @@ window.Neurova = window.Neurova || {};
             ? `Already have an account? <a id="authToggle">Log in</a>`
             : `Don't have an account yet? <a id="authToggle">Create one</a>`}
         </div>
-      </div>
-        </div>
-        <div class="auth-split-art">
-          <img src="login-art.jpg" alt="" decoding="async">
-        </div>
-      </div>`;
+      </div>`);
 
-    const brandHome = document.getElementById('authBrandHome');
-    if(brandHome) brandHome.addEventListener('click', () => {
-      const homeLink = document.querySelector('.topnav a[data-nav="home"], .mobile-nav-panel a[data-nav="home"]');
-      if(homeLink) homeLink.click();
-    });
+    wireBrandHome();
 
     document.getElementById('authToggle').addEventListener('click', () => {
       authMode = isSignup ? 'login' : 'signup';

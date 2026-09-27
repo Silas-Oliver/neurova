@@ -1905,7 +1905,7 @@ window.Neurova = window.Neurova || {};
             </svg>
             <span>Neurova</span>
           </a>
-          <h2 class="auth-headline">Measure what you'd otherwise guess</h2>
+          <h2 class="auth-headline">Progress you can see, not just feel</h2>
           <p class="auth-tagline">A personal record of nerve recovery, session by session</p>
       <div class="auth-card">
         <p class="auth-sub">${isSignup ? 'A name, an email, and a password — nothing else is collected.' : 'Log in to the account you set up earlier.'}</p>

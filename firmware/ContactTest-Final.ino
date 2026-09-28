@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28i flex sensor";
+const char FIRMWARE_VERSION[] = "2026-09-28j flex calibration + stream";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -219,6 +219,15 @@ const int EEPROM_ADDR_ADC_REF = 12;
 // build are ignored rather than misread. (V2: excitation moved from VIN to a driven pin,
 // which changed what every stored resistance means.)
 const unsigned long EEPROM_MAGIC = 0x4E524257UL;  // "NRBW"
+// The flex calibration keeps its own magic and its own slot, so a board that has one and
+// not the other restores whichever it has rather than discarding both.
+const int EEPROM_ADDR_FLEX_MAGIC = 16;
+const int EEPROM_ADDR_FLEX_FLAT = 20;
+const int EEPROM_ADDR_FLEX_BENT = 24;
+const unsigned long EEPROM_FLEX_MAGIC = 0x4E524658UL;  // "NRFX"
+// Endpoints closer together than this are not a hand opening and closing -- most likely
+// the same pose captured twice, which would make every later reading meaningless.
+const float FLEX_MIN_SPAN_COUNTS = 60.0;
 
 float baselineResistance = -1;
 bool isCalibrated = false;
@@ -723,6 +732,7 @@ void setup() {
   contactCircuitOff();
   pinMode(MODULE_RELAY_PIN, OUTPUT);
   digitalWrite(MODULE_RELAY_PIN, LOW);   // released: module connected, as it was before
+  loadFlexCalibration();   // without this the saved endpoints are written and never read
 
   Serial.print("System Ready. Firmware: ");
   Serial.println(FIRMWARE_VERSION);
@@ -768,6 +778,71 @@ float readFlexRaw(){
   return (float)sum / FLEX_OVERSAMPLE;
 }
 
+float flexFlatRaw = 0, flexBentRaw = 0;
+bool flexCalibrated = false;
+bool flexStreaming = false;
+unsigned long lastFlexStreamSampleTime = 0;
+const unsigned long FLEX_STREAM_INTERVAL_MS = 60;
+
+void saveFlexCalibration(){
+  EEPROM.put(EEPROM_ADDR_FLEX_MAGIC, EEPROM_FLEX_MAGIC);
+  EEPROM.put(EEPROM_ADDR_FLEX_FLAT, flexFlatRaw);
+  EEPROM.put(EEPROM_ADDR_FLEX_BENT, flexBentRaw);
+}
+
+void loadFlexCalibration(){
+  unsigned long magic = 0;
+  EEPROM.get(EEPROM_ADDR_FLEX_MAGIC, magic);
+  if(magic != EEPROM_FLEX_MAGIC) return;
+  float flat = 0, bent = 0;
+  EEPROM.get(EEPROM_ADDR_FLEX_FLAT, flat);
+  EEPROM.get(EEPROM_ADDR_FLEX_BENT, bent);
+  if(isnan(flat) || isnan(bent) || (flat - bent) < FLEX_MIN_SPAN_COUNTS) return;
+  flexFlatRaw = flat; flexBentRaw = bent; flexCalibrated = true;
+}
+
+// Raw counts mean nothing on their own: where the strip sits on the finger changes them
+// from one wearing to the next. Reported against the wearer's own flat-to-fist range, a
+// reading is comparable between sessions -- the same argument as the contact baseline.
+// 0% is flat, 100% is fully closed. Not clamped, so overshoot stays visible instead of
+// being quietly hidden by the calibration being slightly off.
+int flexPercent(float raw){
+  return (int)roundf((flexFlatRaw - raw) * 100.0 / (flexFlatRaw - flexBentRaw));
+}
+
+void reportFlexStatus(){
+  Serial.print(F("FLEX_STATUS:"));
+  if(!flexCalibrated){ Serial.println(F("uncalibrated")); return; }
+  Serial.print(F("calibrated:"));
+  Serial.print(flexFlatRaw, 1);
+  Serial.print(F(":"));
+  Serial.println(flexBentRaw, 1);
+}
+
+// Captures one end of the range. Averaged over a moment because a hand held still still
+// drifts a little, and one instant of that drift should not define an endpoint.
+void captureFlexEndpoint(bool flat){
+  float sum = 0;
+  for(int i = 0; i < 8; i++){ sum += readFlexRaw(); delay(25); }
+  float raw = sum / 8;
+  if(flat) flexFlatRaw = raw; else flexBentRaw = raw;
+  Serial.print(F("FLEX_CAL:"));
+  Serial.print(flat ? F("flat=") : F("bent="));
+  Serial.println(raw, 1);
+
+  if(flexFlatRaw > 0 && flexBentRaw > 0){
+    if((flexFlatRaw - flexBentRaw) < FLEX_MIN_SPAN_COUNTS){
+      flexCalibrated = false;
+      Serial.println(F("FLEX_CAL:failed -- flat and bent are too close together."));
+      Serial.println(F("Capture FLAT with the hand open and BENT with it fully closed."));
+      return;
+    }
+    flexCalibrated = true;
+    saveFlexCalibration();
+    Serial.println(F("FLEX_CAL:done"));
+  }
+}
+
 void runFlexReading(){
   float raw = readFlexRaw();
   Serial.print(F("FLEX raw="));
@@ -781,7 +856,13 @@ void runFlexReading(){
   float ohms = FLEX_FIXED_RESISTOR * (ADC_MAX_COUNTS - raw) / raw;
   Serial.print(F("  R="));
   Serial.print(ohms, 0);
-  Serial.println(F(" ohms"));
+  Serial.print(F(" ohms"));
+  if(flexCalibrated){
+    Serial.print(F("  bend="));
+    Serial.print(flexPercent(raw));
+    Serial.print(F("%"));
+  }
+  Serial.println();
 }
 
 // ---------------- AC contact measurement ----------------
@@ -876,7 +957,9 @@ void printMenu() {
   Serial.println(F("  3 DIAG             8 VERSION"));
   Serial.println(F("  4 STATUS           9 FORGET (clears saved baseline)"));
   Serial.println(F("  5 EMG              0 repeat last"));
-  Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | FLEX | MENU"));
+  Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | MENU"));
+  Serial.println(F("  FLEX | FLEXCAL:FLAT | FLEXCAL:BENT | FLEXCAL:STATUS"));
+  Serial.println(F("  FLEX_STREAM_START | FLEX_STREAM_STOP"));
 }
 
 // Turns a bare digit into the command it stands for, leaving anything else untouched.
@@ -927,6 +1010,19 @@ void loop() {
       runContactTest();
     } else if (input == "FLEX") {
       runFlexReading();
+    } else if (input == "FLEXCAL:FLAT") {
+      captureFlexEndpoint(true);
+    } else if (input == "FLEXCAL:BENT") {
+      captureFlexEndpoint(false);
+    } else if (input == "FLEXCAL:STATUS") {
+      reportFlexStatus();
+    } else if (input == "FLEX_STREAM_START") {
+      flexStreaming = true;
+      lastFlexStreamSampleTime = millis();
+      Serial.println(F("FLEX_STREAM:started"));
+    } else if (input == "FLEX_STREAM_STOP") {
+      flexStreaming = false;
+      Serial.println(F("FLEX_STREAM:stopped"));
     } else if (input == "AC") {
       runAcTest(5);
     } else if (input.startsWith("AC:")) {
@@ -966,6 +1062,20 @@ void loop() {
       handled = false;
     }
     if (handled) moduleSwitch(true);
+  }
+
+  if (flexStreaming) {
+    unsigned long now = millis();
+    if (now - lastFlexStreamSampleTime >= FLEX_STREAM_INTERVAL_MS) {
+      lastFlexStreamSampleTime = now;
+      float raw = readFlexRaw();
+      // Percent first: it is the figure that survives being worn differently tomorrow,
+      // and it is what the website plots. Raw follows it for diagnostics.
+      Serial.print(F("FLEX_LIVE:"));
+      Serial.print(flexCalibrated ? flexPercent(raw) : -1);
+      Serial.print(F(","));
+      Serial.println(raw, 1);
+    }
   }
 
   // Runs alongside the command check above rather than inside it, so a STOP command

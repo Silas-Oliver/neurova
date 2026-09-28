@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28b settle sweep";
+const char FIRMWARE_VERSION[] = "2026-09-28c settled shunt model";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -83,13 +83,18 @@ enum ContactState {
 };
 
 // The EMG module's inputs are permanently wired to the same electrodes, and they are not a
-// short: measured on this rig as roughly 63 kOhm to an internal 1.40 V bias (from the
-// HIGH-vs-LOW swing with the jack in and no electrodes attached, 331.01 / 270.04, a gap of
-// 60.5 counts, which those two values predict to within half a count). That is soft enough
-// to measure skin straight through, which is why the divider is 100 kOhm rather than 1 MOhm
-// and why no analog switch is needed to share electrodes between the two circuits.
-const float EMG_SHUNT_OHMS = 63000.0;
-const float EMG_BIAS_V = 1.40;
+// short, but it is also not slow-settling noise: swept with SETTLE:<ms>, the HIGH-vs-LOW
+// gap grows 49 -> 108 -> 121.18 -> 121.21 counts at 50/250/1000/3000 ms and then stops, so
+// the input is capacitive and only the settled reading means anything. Settled, it is
+// ~13.4 kOhm to a 1.03 V bias, which predicts the measured 305.41 to within two counts.
+//
+// 13.4 kOhm sits in PARALLEL with skin, so it caps what can be measured through it: open
+// circuit and 470 kOhm skin differ by five counts at the junction. Compensating for it
+// recovers accuracy at low skin resistance but cannot recover range, so a real contact
+// check still needs the module disconnected from the electrodes -- by series capacitors
+// (4.7 uF suffices against a 13.4 kOhm input) or an analog switch.
+const float EMG_SHUNT_OHMS = 13400.0;
+const float EMG_BIAS_V = 1.03;
 // With the module connected the junction tops out near 571 counts, so a reading above this
 // can only mean the module is absent and the junction is floating free.
 const float MODULE_ABSENT_MIN_RAW = 900.0;
@@ -116,7 +121,7 @@ float openThresholdRaw() {
 // like a resistor -- its apparent impedance measured eightfold different at 1 MOhm and at
 // 100 kOhm -- which points at an AC-coupled or actively biased input still charging when
 // the reading is taken. Sweeping this is how that gets settled without reflashing.
-int contactSettleMs = 50;
+int contactSettleMs = 1200;
 
 // At megohm source impedances the ADC's sample-and-hold cannot charge in one conversion,
 // so a single reading is both biased low and very noisy -- measured here as a 73-count

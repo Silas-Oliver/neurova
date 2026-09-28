@@ -460,6 +460,18 @@ window.Neurova = window.Neurova || {};
   const EMG_PLOT_MAX_POINTS = 200;
   const EMG_BASELINE_DURATION_MS = 10000;
   const EMG_STREAM_EXPECTED_INTERVAL_MS = 25;  // matches EMG_STREAM_INTERVAL_MS in the firmware
+  // This EMG module's envelope moves DOWN as the muscle works -- about 790 at rest and 350
+  // at full effort on the bench, graded in between, and confirmed as muscle activity rather
+  // than movement artifact by an isometric contraction producing the same swing while
+  // pressing on an electrode produces none. Everything below is written around a signal
+  // that RISES with effort, so the sample is flipped once here on the way in rather than
+  // teaching onset detection, peak tracking and the plot to each handle both directions.
+  //
+  // Done on this side rather than in firmware deliberately: the board's job is to report
+  // what it measures, and a polarity that belongs to one particular module should not be
+  // baked into the measurement path -- where it also cannot be changed without reflashing.
+  const EMG_SIGNAL_INVERTED = true;
+  const EMG_ADC_MAX = 1023;
   const EMG_LIVE_SMOOTHING_ALPHA = 0.3;      // light smoothing for the plotted line only
   const EMG_DETECT_ALPHA = 0.6;              // faster, less-lagged signal used for the movement decision itself —
                                               // separate from the plot line, so a quick flex's peak doesn't get
@@ -580,7 +592,9 @@ window.Neurova = window.Neurova || {};
     return emgDetectValue - emgDetectHistory[0];
   }
 
-  function feedEmgSample(raw){
+  function feedEmgSample(reading){
+    // From here down, larger always means more effort.
+    const raw = EMG_SIGNAL_INVERTED ? (EMG_ADC_MAX - reading) : reading;
     emgSmoothedValue = (emgSmoothedValue === null) ? raw : (EMG_LIVE_SMOOTHING_ALPHA * raw + (1 - EMG_LIVE_SMOOTHING_ALPHA) * emgSmoothedValue);
     emgDetectValue = (emgDetectValue === null) ? raw : (EMG_DETECT_ALPHA * raw + (1 - EMG_DETECT_ALPHA) * emgDetectValue);
 

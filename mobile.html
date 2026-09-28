@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="color-scheme" content="light">
 <title>Neurova — Mobile</title>
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20260928-6">
+<link rel="stylesheet" href="shared.css?v=20260928-8">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -683,7 +684,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20260928-6"></script>
+<script src="shared.js?v=20260928-8"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the
@@ -718,11 +719,24 @@
   async function fillMetrics(){
     if(!window.Neurova || !window.Neurova.loadSessions) return;
     let rows = null;
-    try{ rows = await window.Neurova.loadSessions(25); }catch(e){ return; }
+    try{ rows = await window.Neurova.loadSessions(50); }catch(e){ return; }
+    // null means signed out rather than empty, and those deserve different wording.
+    if(rows === null){
+      if(baselineEl) baselineEl.textContent = '—';
+      if(contactEl) contactEl.textContent = 'sign in';
+      return;
+    }
+    if(!rows.length){
+      if(baselineEl) baselineEl.textContent = '—';
+      if(contactEl) contactEl.textContent = 'no tests yet';
+      return;
+    }
     if(!rows || !rows.length) return;
-    // loadSessions returns newest first; take the latest of each kind.
-    const calib = rows.find(r => r.type === 'calibration' && r.baselineOhms);
-    const test  = rows.find(r => r.type === 'contact' && r.verdict);
+    // loadSessions returns OLDEST first (it reverses the query), so the most recent entry
+    // is at the end. Scanning forwards showed the oldest session on record.
+    const latest = pred => { for(let i = rows.length - 1; i >= 0; i--){ if(pred(rows[i])) return rows[i]; } return null; };
+    const calib = latest(r => r.type === 'calibration' && r.baselineOhms > 0);
+    const test  = latest(r => r.type === 'contact' && r.verdict);
     if(calib && baselineEl){
       const s = ohms(calib.baselineOhms);
       if(s) baselineEl.textContent = s;

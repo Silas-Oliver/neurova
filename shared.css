@@ -772,7 +772,7 @@
     -webkit-tap-highlight-color:transparent;   /* iOS draws its own press states below */
     -webkit-text-size-adjust:100%;
     /* Clear the tab bar, plus the home indicator on a notched phone. */
-    padding-bottom:calc(64px + env(safe-area-inset-bottom));
+    padding-bottom:calc(76px + env(safe-area-inset-bottom));
   }
   .force-mobile h1, .force-mobile h2, .force-mobile h3{
     font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
@@ -832,28 +832,47 @@
   }
 
   .ios-tabbar{ display:none; }
+  /* Styled after the macOS Dock rather than a flat iOS tab bar: a floating translucent
+     slab inset from the edges, heavy blur behind it, and the active item marked by the
+     small dot the Dock puts under a running app. Icons carry the meaning, so the labels
+     are available to screen readers but not drawn -- the Dock has none either. */
   .force-mobile .ios-tabbar{
     display:flex;
-    position:fixed; left:0; right:0; bottom:0; z-index:60;
-    background:rgba(248,248,250,0.88);
-    backdrop-filter:saturate(180%) blur(20px);
-    -webkit-backdrop-filter:saturate(180%) blur(20px);
-    border-top:0.5px solid var(--ios-sep);
-    padding-bottom:env(safe-area-inset-bottom);
+    position:fixed; z-index:60;
+    left:50%; transform:translateX(-50%);
+    bottom:calc(10px + env(safe-area-inset-bottom));
+    padding:7px 9px;
+    gap:3px;
+    border-radius:22px;
+    background:rgba(252,252,253,0.72);
+    backdrop-filter:saturate(180%) blur(22px);
+    -webkit-backdrop-filter:saturate(180%) blur(22px);
+    border:0.5px solid rgba(0,0,0,0.10);
+    box-shadow:0 8px 28px rgba(28,43,39,0.18), 0 1px 2px rgba(28,43,39,0.10);
   }
   .force-mobile .ios-tab{
-    flex:1;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:3px;
-    padding:7px 0 6px;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    width:52px; height:44px;
+    border-radius:15px;
     text-decoration:none;
-    color:var(--ios-secondary);
-    font-size:10px; letter-spacing:-0.01em;
-    transition:color .12s ease;
+    color:var(--muted);
+    transition:transform .16s cubic-bezier(.2,.8,.3,1), color .16s ease, background .16s ease;
   }
   .force-mobile .ios-tab svg{ width:25px; height:25px; }
-  .force-mobile .ios-tab.active{ color:var(--primary); }
-  .force-mobile .ios-tab:active{ opacity:0.55; }
+  /* The label stays in the DOM for assistive tech, but the Dock shows icons only. */
+  .force-mobile .ios-tab span{
+    position:absolute; width:1px; height:1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;
+  }
+  .force-mobile .ios-tab.active{ color:var(--primary); background:rgba(47,110,99,0.12); }
+  /* The Dock's running-app dot. */
+  .force-mobile .ios-tab.active::after{
+    content:''; position:absolute; bottom:1px; left:50%; transform:translateX(-50%);
+    width:4px; height:4px; border-radius:50%; background:currentColor;
+  }
+  /* Dock magnification, adapted to touch: the item you press lifts. */
+  .force-mobile .ios-tab:active{ transform:scale(1.18) translateY(-2px); }
 
   /* The desktop/mobile switch is a footer link, not a destination -- keep it clear of
      the tab bar so it cannot be mistaken for one. */
@@ -877,46 +896,6 @@
   /* Momentum scrolling, as every native list has. */
   .force-mobile .log, .force-mobile .raw-log, .force-mobile .chart-scroll{
     -webkit-overflow-scrolling:touch;
-  }
-
-  /* ---------- iOS mobile: dark mode ----------
-     The site had no dark scheme at all, so a phone set to dark was left to the browser's
-     automatic inversion, which fights hand-picked colours and produces muddy greys. This
-     declares a real one. Overriding the root custom properties means every existing
-     component follows without being restyled individually, and color-scheme tells the
-     browser to stop force-darkening because the page handles it. */
-  .force-mobile{ color-scheme:light dark; }
-  @media (prefers-color-scheme: dark){
-    .force-mobile{
-      --ios-grouped:#000000;     /* iOS puts grouped content on true black */
-      --ios-card:#1c1c1e;
-      --ios-sep:rgba(84,84,88,0.65);
-      --ios-secondary:rgba(235,235,245,0.6);
-      --bg:#000000;
-      --panel:#1c1c1e;
-      --ink:#f2f2f7;
-      --muted:rgba(235,235,245,0.6);
-      --line:rgba(84,84,88,0.5);
-      --line-strong:rgba(84,84,88,0.85);
-      /* The brand green is too dark to read on black, so the tint lifts while staying
-         recognisably the same colour. */
-      --primary:#4fb99f;
-      --primary-ink:#04120e;
-      --grid:rgba(79,185,159,0.14);
-      --shadow:0 1px 2px rgba(0,0,0,0.5);
-    }
-    .force-mobile .site-header{ background:rgba(0,0,0,0.72); }
-    .force-mobile .ios-tabbar{ background:rgba(22,22,24,0.88); }
-    .force-mobile .scope, .force-mobile .test-card, .force-mobile .test-featured,
-    .force-mobile .wiring-card, .force-mobile .how-step, .force-mobile .meter-panel,
-    .force-mobile .menu-option, .force-mobile .spec, .force-mobile .verdict-box,
-    .force-mobile .data-chart-wrap, .force-mobile .emg-scope, .force-mobile .auth-card{
-      background:var(--ios-card);
-      box-shadow:none;
-    }
-    .force-mobile input, .force-mobile select, .force-mobile textarea{
-      background:#1c1c1e; color:var(--ink); border-color:var(--line);
-    }
   }
 
   /* ---------- iOS mobile: horizontal card rows ----------
@@ -1010,3 +989,59 @@
   .force-mobile .dash-tile svg{ width:23px; height:23px; color:var(--primary); margin-bottom:5px; }
   .force-mobile .dash-tile b{ font-size:15px; font-weight:600; }
   .force-mobile .dash-tile span{ font-size:12.5px; color:var(--ios-secondary); line-height:1.35; }
+
+  /* ---------- iOS mobile: Data tab ----------
+     The metric switcher was a row of ordinary buttons, and since mobile buttons are 48px
+     tall for thumbs, it wrapped into a stack of large blocks that read as four separate
+     actions rather than one control with four positions. A segmented control says "these
+     are alternatives, one is selected" at a glance, which is what it actually is. */
+  .force-mobile .data-toolbar{
+    display:flex; flex-wrap:nowrap; gap:2px;
+    background:rgba(118,118,128,0.12);
+    border-radius:11px;
+    padding:2px;
+    margin:14px 0 12px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .force-mobile .data-toolbar::-webkit-scrollbar{ display:none; }
+  .force-mobile .data-toolbar .btn{
+    flex:1 0 auto;
+    min-height:34px; padding:6px 14px;
+    font-size:13px; font-weight:600;
+    border-radius:9px; border:none;
+    background:transparent; color:var(--ink);
+    white-space:nowrap;
+  }
+  .force-mobile .data-toolbar .btn-primary{
+    background:var(--panel); color:var(--ink);
+    box-shadow:0 1px 3px rgba(28,43,39,0.16);
+  }
+  /* The explanatory paragraph belongs on desktop; on a phone it pushes the actual data
+     off the first screen. The heading alone carries it. */
+  .force-mobile #page-data .section-head p{ display:none; }
+  /* These wraps carry inline 56px padding meant for desktop, so overriding needs weight. */
+  .force-mobile #page-data > section > .wrap,
+  .force-mobile #page-specs > section > .wrap{
+    padding-top:14px !important;
+    padding-bottom:20px !important;
+  }
+  .force-mobile .data-chart-wrap{ border:none; padding:16px; }
+  .force-mobile .mini-feed{
+    background:var(--ios-card); border-radius:var(--radius-lg);
+    padding:12px; font-size:12px;
+  }
+
+  /* The dock floats above the content, so the page has to reserve its full height plus
+     the gap beneath it, or the last rows sit underneath it. */
+  .force-mobile{ padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
+  /* The chart's source label and Refresh sat on one line and fought for width, wrapping
+     the label mid-phrase. Stacked, each gets the room it needs. */
+  .force-mobile .chart-head{
+    flex-direction:column; align-items:flex-start; gap:6px;
+  }
+  .force-mobile .chart-head .btn-small{
+    min-height:32px; padding:5px 12px; font-size:13px; align-self:flex-start;
+  }
+  .force-mobile .chart-source{ font-size:11px; line-height:1.4; }
+  .force-mobile #page-data section, .force-mobile #page-specs section{ padding-top:0; }

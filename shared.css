@@ -1081,3 +1081,33 @@
     color:var(--ink);
     letter-spacing:-0.025em;
   }
+
+  /* ---------- product lockup ----------
+     A lone word cannot tell you it is a name. What does the work is the arrangement every
+     hardware maker uses: the company above it, the product name large, and what the thing
+     actually is underneath. The descriptor is the part that settles it -- "Reach" reads as
+     a verb on its own, and as a name the moment "Nerve recovery glove" sits beneath it. */
+  .product-lockup{ margin:6px 0 18px; }
+  .lockup-company{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px; font-weight:600;
+    letter-spacing:0.22em;
+    color:var(--muted);
+    margin-bottom:2px;
+  }
+  .lockup-descriptor{
+    display:block;
+    font-size:13.5px;
+    color:var(--muted);
+    margin-top:1px;
+  }
+  .force-mobile .product-lockup .dash-title{ margin:0; line-height:1.05; }
+
+  /* A prompt sitting where a measurement goes should not be set like a measurement --
+     at full size and weight, "Sign in to see" read as though it were the reading. */
+  .force-mobile .dash-metric b.is-placeholder{
+    font-size:14px;
+    font-weight:500;
+    color:var(--ios-secondary);
+  }

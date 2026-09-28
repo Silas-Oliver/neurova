@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20260928-11">
+<link rel="stylesheet" href="shared.css?v=20260928-12">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -69,7 +69,11 @@
 <div class="page page-active" data-page="home" id="page-home">
 
   <section class="ios-dash">
-    <h1 class="dash-title"><span class="product-name">Reach</span></h1>
+    <div class="product-lockup">
+      <span class="lockup-company">NEUROVA</span>
+      <h1 class="dash-title"><span class="product-name">Reach</span></h1>
+      <span class="lockup-descriptor">Nerve recovery glove</span>
+    </div>
 
     <a class="dash-status" href="#test-menu" data-nav="test-menu">
       <div class="dash-status-row">
@@ -120,7 +124,7 @@
     <div class="hero-grid">
       <div>
         <div class="eyebrow">Wearable nerve-repair tracking</div>
-        <h1>A compression glove that watches how a damaged nerve recovers, one worn session at a time.</h1>
+        <h1><span class="product-name">Reach</span> is a compression glove that watches how a damaged nerve recovers, one worn session at a time.</h1>
         <p class="lede">Electrodes built into the glove pick up electrical activity from the hand as a nerve heals, so change over weeks can be tracked instead of guessed at. This page runs the growing set of tests behind that tracking — checking electrode contact, capturing a personal baseline, timing reaction speed, and logging sessions over time.</p>
         <div class="hero-actions">
           <button class="btn btn-primary" id="heroConnectBtn">Connect the board</button>
@@ -684,7 +688,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20260928-11"></script>
+<script src="shared.js?v=20260928-12"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the
@@ -710,6 +714,17 @@
 
   const baselineEl = document.getElementById('dashBaseline');
   const contactEl  = document.getElementById('dashContact');
+  // A prompt is not a reading, so it should not be set like one.
+  function setPlaceholder(el, text){
+    if(!el) return;
+    el.textContent = text;
+    el.classList.add('is-placeholder');
+  }
+  function setValue(el, text){
+    if(!el) return;
+    el.textContent = text;
+    el.classList.remove('is-placeholder');
+  }
   function ohms(v){
     if(!(v > 0)) return null;
     return v >= 1000000 ? (v / 1000000).toFixed(2) + ' MΩ'
@@ -722,13 +737,13 @@
     try{ rows = await window.Neurova.loadSessions(50); }catch(e){ return; }
     // null means signed out rather than empty, and those deserve different wording.
     if(rows === null){
-      if(baselineEl) baselineEl.textContent = '—';
-      if(contactEl) contactEl.textContent = 'sign in';
+      setPlaceholder(baselineEl, '—');
+      setPlaceholder(contactEl, 'Sign in to see');
       return;
     }
     if(!rows.length){
-      if(baselineEl) baselineEl.textContent = '—';
-      if(contactEl) contactEl.textContent = 'no tests yet';
+      setPlaceholder(baselineEl, '—');
+      setPlaceholder(contactEl, 'No tests yet');
       return;
     }
     if(!rows || !rows.length) return;
@@ -737,11 +752,14 @@
     const latest = pred => { for(let i = rows.length - 1; i >= 0; i--){ if(pred(rows[i])) return rows[i]; } return null; };
     const calib = latest(r => r.type === 'calibration' && r.baselineOhms > 0);
     const test  = latest(r => r.type === 'contact' && r.verdict);
-    if(calib && baselineEl){
+    if(calib){
       const s = ohms(calib.baselineOhms);
-      if(s) baselineEl.textContent = s;
+      if(s) setValue(baselineEl, s);
     }
-    if(test && contactEl) contactEl.textContent = String(test.verdict).toLowerCase();
+    if(test){
+      const v = String(test.verdict);
+      setValue(contactEl, v.charAt(0) + v.slice(1).toLowerCase());
+    }
   }
   fillMetrics();
   if(window.Neurova && window.Neurova.onAccountChange) window.Neurova.onAccountChange(fillMetrics);

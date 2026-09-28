@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28d AC contact check";
+const char FIRMWARE_VERSION[] = "2026-09-28e relay isolation";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -98,6 +98,31 @@ const float EMG_BIAS_V = 1.03;
 // With the module connected the junction tops out near 571 counts, so a reading above this
 // can only mean the module is absent and the junction is floating free.
 const float MODULE_ABSENT_MIN_RAW = 900.0;
+
+// Relay coil, through a PN2222 with a flyback diode across the coil. The module's inputs
+// carry roughly 10 uF to ground -- measured two ways, as a 1.1 s DC settle against 113 kOhm
+// and as an impedance falling 1281 / 236 / 125 ohms at 10 / 50 / 100 Hz -- which shorts the
+// junction at every frequency the contact check could use. Series capacitors cannot isolate
+// an AC measurement (they pass AC by definition) and cutting the module's power made it
+// worse, its input clamping to a dead rail. Only a real open circuit works.
+//
+// Wired to the relay's NC contact, so a released coil leaves the module connected: the
+// board can lose power or run older firmware and EMG still behaves as it always did. The
+// coil is only energised for the moment a contact measurement takes, which also keeps it
+// quiet during EMG, when the signal is microvolts and a buzzing coil alongside it would
+// not be.
+const int MODULE_RELAY_PIN = 4;
+const int RELAY_SETTLE_MS = 15;
+
+// Opens the relay, disconnecting the EMG module from the electrodes for a measurement.
+bool moduleRelayConnected = true;
+
+void moduleSwitch(bool connected) {
+  if (connected == moduleRelayConnected) return;   // idempotent: no coil, no delay
+  moduleRelayConnected = connected;
+  digitalWrite(MODULE_RELAY_PIN, connected ? LOW : HIGH);
+  delay(RELAY_SETTLE_MS);
+}
 
 // Whether the EMG module is currently loading the divider. Set from a measurement rather
 // than assumed, so one firmware measures correctly with the jack in or out.
@@ -364,6 +389,7 @@ void readEmgWindow(int &meanOut, int &peakToPeakOut) {
 // A high reading in the first state means the sink side is not connected. A low reading
 // in the third means the resistor or the drive pin is not connected.
 void runDiagnostics() {
+  moduleSwitch(false);
   Serial.println("--- DIAG ---");
 
   contactCircuitOn();
@@ -472,6 +498,7 @@ ContactState classifyContact(float rawReading, float &resistanceOut) {
 // ---------------- commands ----------------
 
 void runCalibration() {
+  moduleSwitch(false);
   Serial.println("--- CALIBRATION STARTED ---");
   if (contactPathState() == PATH_BLOCKED) reportPathSuspect();
   contactCircuitOn();
@@ -559,6 +586,7 @@ void reportStatus() {
 }
 
 void runContactTest() {
+  moduleSwitch(false);
   if (contactPathState() == PATH_BLOCKED) reportPathSuspect();
   contactCircuitOn();
   int goodCount = 0;
@@ -671,6 +699,8 @@ void setup() {
   // Start with the electrodes clear: nothing should be driving DC into them until a
   // contact reading is actually asked for.
   contactCircuitOff();
+  pinMode(MODULE_RELAY_PIN, OUTPUT);
+  digitalWrite(MODULE_RELAY_PIN, LOW);   // released: module connected, as it was before
 
   Serial.print("System Ready. Firmware: ");
   Serial.println(FIRMWARE_VERSION);
@@ -745,6 +775,7 @@ float readAcAmplitude(int halfPeriodMs, int cycles) {
 // supply across the fixed resistor and whatever sits from junction to ground, so the
 // fraction of the swing that survives gives the ratio directly.
 void runAcTest(int halfPeriodMs) {
+  moduleSwitch(false);
   float ampCounts = readAcAmplitude(halfPeriodMs, 32);
   float fraction = ampCounts / ADC_MAX_COUNTS;
   Serial.print(F("AC ")); Serial.print(1000 / (2 * halfPeriodMs));
@@ -811,6 +842,10 @@ void loop() {
       input.toCharArray(lastCommand, sizeof(lastCommand));
     }
 
+    // Reconnected here rather than at the end of each measurement, because those have
+    // several early returns and any one of them could otherwise leave the module cut off
+    // from the electrodes -- with EMG then reading nothing and no indication why.
+    bool handled = true;
     if (input == "MENU" || input == "?") {
       printMenu();
     } else if (input == "CALIBRATE") {
@@ -855,7 +890,10 @@ void loop() {
     } else if (input == "EMG_STREAM_STOP") {
       emgStreaming = false;
       Serial.println("EMG_STREAM:stopped");
+    } else {
+      handled = false;
     }
+    if (handled) moduleSwitch(true);
   }
 
   // Runs alongside the command check above rather than inside it, so a STOP command

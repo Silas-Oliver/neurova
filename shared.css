@@ -753,3 +753,128 @@
   .force-mobile .mobile-hardware-explainer{display:block;}
   .force-mobile .live-hardware-block{display:none;}
 /*BlahBlah*/
+
+  /* ---------- iOS-flavoured mobile ----------
+     Scoped entirely to .force-mobile, so desktop is untouched. The aim is for the phone
+     version to read as an iOS app rather than as a narrow website: the system typeface,
+     grouped-list backgrounds, a bottom tab bar instead of a hamburger, and controls sized
+     for thumbs. Neurova's green stays as the tint colour -- iOS structure, not Apple's
+     palette, since the brand should still be recognisably itself. */
+  .force-mobile{
+    --ios-grouped:#f2f2f7;      /* the grey behind grouped content */
+    --ios-card:#ffffff;
+    --ios-sep:rgba(60,60,67,0.16);
+    --ios-secondary:rgba(60,60,67,0.62);
+    --radius:10px;
+    --radius-lg:13px;
+    background:var(--ios-grouped);
+    font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    -webkit-tap-highlight-color:transparent;   /* iOS draws its own press states below */
+    -webkit-text-size-adjust:100%;
+    /* Clear the tab bar, plus the home indicator on a notched phone. */
+    padding-bottom:calc(64px + env(safe-area-inset-bottom));
+  }
+  .force-mobile h1, .force-mobile h2, .force-mobile h3{
+    font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    letter-spacing:-0.022em; font-weight:700;
+  }
+  /* Large title: iOS leads a screen with the name set big and flush left. */
+  .force-mobile .hero h1{ font-size:34px; line-height:1.12; }
+  .force-mobile .lede{ font-size:16px; color:var(--ios-secondary); }
+  .force-mobile .eyebrow{ font-size:12px; letter-spacing:0.04em; }
+
+  /* Grouped-list section headers: small, uppercase, inset, quiet. */
+  .force-mobile .section-head h2{ font-size:20px; }
+  .force-mobile .section-head{ padding-inline:2px; }
+
+  /* Cards become inset grouped rows: white on grey, generously rounded, no hard borders. */
+  .force-mobile .scope,
+  .force-mobile .test-card,
+  .force-mobile .test-featured,
+  .force-mobile .wiring-card,
+  .force-mobile .how-step,
+  .force-mobile .meter-panel,
+  .force-mobile .menu-option,
+  .force-mobile .spec,
+  .force-mobile .verdict-box,
+  .force-mobile .data-chart-wrap,
+  .force-mobile .emg-scope,
+  .force-mobile .auth-card{
+    background:var(--ios-card);
+    border:none;
+    border-radius:var(--radius-lg);
+    box-shadow:0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  /* Controls: full width, 17px label, and a press state rather than a hover one --
+     a phone has no pointer to hover with. */
+  .force-mobile .btn{
+    border-radius:var(--radius);
+    font-size:17px;
+    font-weight:590;
+    padding:13px 18px;
+    min-height:48px;              /* comfortably above Apple's 44pt touch minimum */
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  .force-mobile .btn:active{ transform:scale(0.97); opacity:0.85; }
+  .force-mobile .hero-actions .btn{ width:100%; }
+  .force-mobile .btn-ghost{ background:transparent; border:none; color:var(--primary); }
+
+  /* The tab bar replaces the hamburger, so the menu affordances go away entirely. */
+  .force-mobile .hamburger,
+  .force-mobile .mobile-nav-panel,
+  .force-mobile .topnav{ display:none !important; }
+  .force-mobile .site-header{
+    background:rgba(242,242,247,0.82);
+    backdrop-filter:saturate(180%) blur(20px);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:0.5px solid var(--ios-sep);   /* hairline, as iOS draws it */
+  }
+
+  .ios-tabbar{ display:none; }
+  .force-mobile .ios-tabbar{
+    display:flex;
+    position:fixed; left:0; right:0; bottom:0; z-index:60;
+    background:rgba(248,248,250,0.88);
+    backdrop-filter:saturate(180%) blur(20px);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-top:0.5px solid var(--ios-sep);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .force-mobile .ios-tab{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px;
+    padding:7px 0 6px;
+    text-decoration:none;
+    color:var(--ios-secondary);
+    font-size:10px; letter-spacing:-0.01em;
+    transition:color .12s ease;
+  }
+  .force-mobile .ios-tab svg{ width:25px; height:25px; }
+  .force-mobile .ios-tab.active{ color:var(--primary); }
+  .force-mobile .ios-tab:active{ opacity:0.55; }
+
+  /* The desktop/mobile switch is a footer link, not a destination -- keep it clear of
+     the tab bar so it cannot be mistaken for one. */
+  .force-mobile .version-switch{ padding-bottom:18px; font-size:13px; }
+
+  /* Sign-in and onboarding take over the whole screen: no tabs to navigate away to yet,
+     and the page owns its own spacing. */
+  .force-mobile.auth-fullscreen .ios-tabbar{ display:none !important; }
+  .force-mobile.auth-fullscreen{ padding-bottom:env(safe-area-inset-bottom); }
+
+  /* Primary actions stack full-width on a phone rather than sitting side by side. */
+  .force-mobile .hero-actions{ flex-direction:column; align-items:stretch; }
+  .force-mobile .btn-ghost{ text-decoration:none; }
+  /* iOS zooms the page when a focused input is under 16px, which throws the layout off
+     and cannot be undone by the user. 17px is the system body size and avoids it. */
+  .force-mobile input, .force-mobile select, .force-mobile textarea{
+    font-size:17px;
+    border-radius:var(--radius);
+  }
+  .force-mobile .status-chip{ font-size:12px; max-width:52vw; }
+  /* Momentum scrolling, as every native list has. */
+  .force-mobile .log, .force-mobile .raw-log, .force-mobile .chart-scroll{
+    -webkit-overflow-scrolling:touch;
+  }

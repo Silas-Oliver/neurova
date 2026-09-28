@@ -1058,7 +1058,12 @@
     min-height:32px; padding:5px 12px; font-size:13px; align-self:flex-start;
   }
   .force-mobile .chart-source{ font-size:11px; line-height:1.4; }
-  .force-mobile #page-data section, .force-mobile #page-specs section{ padding-top:0; }
+  /* The sections wrapping those sub-pages carry desktop top padding too, on top of the
+     wrap's. Excluding home is what keeps this general: home's sections space the dashboard
+     away from what follows it, while every sub-page is a single section whose heading
+     should start where the others do. Naming the sub-pages instead is what left test-menu
+     and account at 56px while data and specs were fixed. */
+  .force-mobile .page:not(#page-home) > section{ padding-top:0; }
 
   /* ---------- the product name ----------
      Reach is a name, but it is also an ordinary English word, so in running text it can

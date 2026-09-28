@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28a 100k divider + EMG shunt";
+const char FIRMWARE_VERSION[] = "2026-09-28b settle sweep";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -112,7 +112,11 @@ float openThresholdRaw() {
 // How long the amplifier and the divider need after a mode change before a reading can be
 // trusted — switching the drive pin steps the voltage on the electrodes, and the EMG
 // module's input filter takes a moment to settle back out afterwards.
-const int CONTACT_SETTLE_MS = 50;
+// Not const: SETTLE:<ms> overrides it at runtime. The EMG module's input does not behave
+// like a resistor -- its apparent impedance measured eightfold different at 1 MOhm and at
+// 100 kOhm -- which points at an AC-coupled or actively biased input still charging when
+// the reading is taken. Sweeping this is how that gets settled without reflashing.
+int contactSettleMs = 50;
 
 // At megohm source impedances the ADC's sample-and-hold cannot charge in one conversion,
 // so a single reading is both biased low and very noisy -- measured here as a 73-count
@@ -362,13 +366,13 @@ void runDiagnostics() {
   Serial.println(readContactAdc(), 2);
 
   digitalWrite(CONTACT_DRIVE_PIN, LOW);
-  delay(CONTACT_SETTLE_MS);
+  delay(contactSettleMs);
   Serial.print("D2=LOW  D3=LOW    raw=");
   Serial.println(readContactAdc(), 2);
 
   digitalWrite(CONTACT_DRIVE_PIN, HIGH);
   pinMode(CONTACT_SINK_PIN, INPUT);
-  delay(CONTACT_SETTLE_MS);
+  delay(contactSettleMs);
   Serial.print("D2=HIGH D3=float  raw=");
   Serial.println(readContactAdc(), 2);
 
@@ -397,12 +401,12 @@ PathState contactPathState() {
   digitalWrite(CONTACT_DRIVE_PIN, HIGH);
 
   pinMode(CONTACT_SINK_PIN, INPUT);              // released
-  delay(CONTACT_SETTLE_MS);
+  delay(contactSettleMs);
   float released = readContactAdc();
 
   pinMode(CONTACT_SINK_PIN, OUTPUT);             // sinking
   digitalWrite(CONTACT_SINK_PIN, LOW);
-  delay(CONTACT_SETTLE_MS);
+  delay(contactSettleMs);
   float sinking = readContactAdc();
 
   pinMode(CONTACT_DRIVE_PIN, INPUT);
@@ -441,7 +445,7 @@ void contactCircuitOn() {
   digitalWrite(CONTACT_DRIVE_PIN, HIGH);
   pinMode(CONTACT_SINK_PIN, OUTPUT);
   digitalWrite(CONTACT_SINK_PIN, LOW);
-  delay(CONTACT_SETTLE_MS);
+  delay(contactSettleMs);
 }
 
 // Lifts the divider off the electrodes entirely. INPUT is high-impedance, which is a real
@@ -744,6 +748,10 @@ void loop() {
         Serial.println("Warning: not calibrated yet, using default thresholds.");
       }
       runContactTest();
+    } else if (input.startsWith("SETTLE:")) {
+      contactSettleMs = input.substring(7).toInt();
+      Serial.print(F("SETTLE_MS:"));
+      Serial.println(contactSettleMs);
     } else if (input.startsWith("SETBASELINE:")) {
       setBaselineFromSerial(input.substring(12));
     } else if (input == "VERSION") {

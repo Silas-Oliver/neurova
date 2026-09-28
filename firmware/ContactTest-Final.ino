@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28c settled shunt model";
+const char FIRMWARE_VERSION[] = "2026-09-28d AC contact check";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -701,6 +701,73 @@ const char *const DIGIT_COMMANDS[] PROGMEM = {
 
 char lastCommand[20] = "";
 
+// ---------------- AC contact measurement ----------------
+//
+// The DC check measures the wrong quantity for a dry electrode. Dry skin's outer layer is
+// nearly an insulator to DC -- megohms, indistinguishable from an electrode lying on the
+// bench -- while at EMG frequencies that same layer behaves as a capacitor and the
+// interface drops by two or three orders of magnitude. Measured here as 1.3 MOhm at DC
+// against roughly 67 kOhm at 50 Hz, on the same arm, seconds apart.
+//
+// So instead of holding the drive pin high and waiting for a level, this squares it up and
+// down and measures how much of that swing reaches the junction. Bigger swing means lower
+// impedance. Nothing else about the circuit changes -- same pins, same fixed resistor.
+//
+// Three things fall out of measuring a difference rather than a level: the module's DC bias
+// cancels, the 1.2 s settle disappears because nothing has to reach a DC steady state, and
+// hydration drift largely cancels too, since it moves DC resistance far more than AC
+// impedance.
+float readAcAmplitude(int halfPeriodMs, int cycles) {
+  pinMode(CONTACT_DRIVE_PIN, OUTPUT);
+  pinMode(CONTACT_SINK_PIN, OUTPUT);
+  digitalWrite(CONTACT_SINK_PIN, LOW);
+
+  // One cycle discarded: the first edge lands on a node sitting wherever the last
+  // measurement left it, and that transient is not part of the steady-state response.
+  digitalWrite(CONTACT_DRIVE_PIN, HIGH); delay(halfPeriodMs);
+  digitalWrite(CONTACT_DRIVE_PIN, LOW);  delay(halfPeriodMs);
+
+  long sum = 0;
+  for (int i = 0; i < cycles; i++) {
+    digitalWrite(CONTACT_DRIVE_PIN, HIGH);
+    delay(halfPeriodMs);
+    int high = analogRead(CONTACT_PIN);
+    digitalWrite(CONTACT_DRIVE_PIN, LOW);
+    delay(halfPeriodMs);
+    int low = analogRead(CONTACT_PIN);
+    sum += (high - low);
+  }
+  contactCircuitOff();
+  return (float)sum / cycles;
+}
+
+// Turns that swing into the impedance shunting the junction. The drive swings the full
+// supply across the fixed resistor and whatever sits from junction to ground, so the
+// fraction of the swing that survives gives the ratio directly.
+void runAcTest(int halfPeriodMs) {
+  float ampCounts = readAcAmplitude(halfPeriodMs, 32);
+  float fraction = ampCounts / ADC_MAX_COUNTS;
+  Serial.print(F("AC ")); Serial.print(1000 / (2 * halfPeriodMs));
+  Serial.print(F(" Hz  amplitude=")); Serial.print(ampCounts, 1);
+  Serial.print(F(" counts"));
+
+  if (fraction <= 0.001 || fraction >= 0.999) {
+    Serial.println(F("  (out of range)"));
+    return;
+  }
+  // amplitude/full = Z / (Rfixed + Z), so Z = Rfixed * fraction / (1 - fraction).
+  float z = FIXED_RESISTOR * fraction / (1.0 - fraction);
+  Serial.print(F("  Z=")); Serial.print(z, 0); Serial.print(F(" ohms"));
+
+  // The module hangs on the junction at AC as well, so the figure above is it in parallel
+  // with skin. Backing it out is only meaningful while skin is the smaller of the two.
+  if (moduleConnected && z < EMG_SHUNT_OHMS) {
+    float skin = 1.0 / (1.0 / z - 1.0 / EMG_SHUNT_OHMS);
+    Serial.print(F("  skin~")); Serial.print(skin, 0);
+  }
+  Serial.println();
+}
+
 void printMenu() {
   Serial.println(F("--- COMMANDS ---"));
   Serial.println(F("  1 CALIBRATE        6 EMG_STREAM_START"));
@@ -708,7 +775,7 @@ void printMenu() {
   Serial.println(F("  3 DIAG             8 VERSION"));
   Serial.println(F("  4 STATUS           9 FORGET (clears saved baseline)"));
   Serial.println(F("  5 EMG              0 repeat last"));
-  Serial.println(F("  SETBASELINE:<ohms> | MENU"));
+  Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | MENU"));
 }
 
 // Turns a bare digit into the command it stands for, leaving anything else untouched.
@@ -753,6 +820,12 @@ void loop() {
         Serial.println("Warning: not calibrated yet, using default thresholds.");
       }
       runContactTest();
+    } else if (input == "AC") {
+      runAcTest(5);
+    } else if (input.startsWith("AC:")) {
+      int h = input.substring(3).toInt();
+      if (h < 1) h = 1;
+      runAcTest(h);
     } else if (input.startsWith("SETTLE:")) {
       contactSettleMs = input.substring(7).toInt();
       Serial.print(F("SETTLE_MS:"));

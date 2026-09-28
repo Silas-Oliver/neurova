@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28g EMG relay ordering";
+const char FIRMWARE_VERSION[] = "2026-09-28h EMG revert, AC check kept";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -113,10 +113,6 @@ const float MODULE_ABSENT_MIN_RAW = 900.0;
 // not be.
 // 1 ms half-period = 500 Hz, the top of the EMG band and the best-conditioned point in the
 // sweep: 10 and 100 Hz both sat near full scale where the reading says only "very high".
-// How far the signal may sit from rest while still counting as rest, and how quickly rest
-// follows it there. 0.02 per sample is slow enough that a held contraction is not absorbed.
-const int EMG_REST_BAND_COUNTS = 25;
-const float EMG_REST_ADAPT = 0.02;
 const int CONTACT_AC_HALF_MS = 1;
 const int MODULE_RELAY_PIN = 4;
 const int RELAY_SETTLE_MS = 15;
@@ -363,29 +359,6 @@ float readContactAdc() {
 // is what grows — and averaging the mean would actively destroy the signal.
 //
 // Reporting both costs nothing and settles the question with one clench.
-// The module's output moves DOWN on a clench on this rig -- roughly 710 at rest to 350 at
-// full effort, graded by effort in between. Whether that inversion is the module or the
-// wiring, the quantity worth reporting is how far the signal has moved from rest, not
-// which way. Tracking the resting level and reporting the excursion makes the sign
-// irrelevant and keeps the website's onset detection working unchanged, since that keys
-// off steep rises rather than absolute level.
-float emgRestLevel = 0;
-bool emgRestValid = false;
-
-// Rest drifts with electrode settling and skin changes, so it follows the signal slowly
-// while nothing is happening and holds still during a contraction -- otherwise a long
-// clench would be absorbed into the baseline and read as rest.
-void updateEmgRest(int mean) {
-  if (!emgRestValid) {
-    emgRestLevel = mean;
-    emgRestValid = true;
-    return;
-  }
-  if (abs(mean - emgRestLevel) < EMG_REST_BAND_COUNTS) {
-    emgRestLevel += (mean - emgRestLevel) * EMG_REST_ADAPT;
-  }
-}
-
 void readEmgWindow(int &meanOut, int &peakToPeakOut) {
   unsigned long start = micros();
   unsigned long sum = 0;
@@ -690,7 +663,6 @@ void runContactTest() {
 // been tuned on real data, and guessing at one here would be the same mistake as the
 // invented GOOD_CONTACT_MULTIPLE was before it got tuned against something real.
 void runEmgReading() {
-  moduleSwitch(true);   // a single reading needs the module connected just as streaming does
   Serial.println("--- EMG READING STARTED ---");
   contactCircuitOff();
   delay(EMG_SETTLE_MS);
@@ -937,13 +909,7 @@ void loop() {
       emgStreaming = true;
       lastEmgStreamSampleTime = millis();
       contactCircuitOff();
-      // The relay has to close BEFORE the settle, not after. Reconnecting the module to
-      // the electrodes steps its inputs, and the amplifier needs the settle to recover
-      // from that -- reconnecting afterwards meant the first samples, and therefore the
-      // resting level learned from them, came out of the middle of that transient.
-      moduleSwitch(true);
-      delay(EMG_SETTLE_MS);
-      emgRestValid = false;     // re-learn rest now that the amplifier has settled
+      delay(EMG_SETTLE_MS);   // let the amplifier recover before the first sample goes out
       Serial.println("EMG_STREAM:started");
     } else if (input == "EMG_STREAM_STOP") {
       emgStreaming = false;
@@ -964,13 +930,7 @@ void loop() {
       readEmgWindow(emgMean, emgPeakToPeak);
       // The website's parser reads the first number and ignores the rest, so adding the
       // spread here tells us more without changing what the site already understands.
-      updateEmgRest(emgMean);
-      int activity = abs(emgMean - (int)emgRestLevel);
-      // Activity first: the website's parser reads the leading number, so it now plots
-      // effort rather than a raw level that happens to fall when the muscle contracts.
       Serial.print("EMG_LIVE:");
-      Serial.print(activity);
-      Serial.print(",");
       Serial.print(emgMean);
       Serial.print(",");
       Serial.println(emgPeakToPeak);

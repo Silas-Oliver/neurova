@@ -1056,3 +1056,28 @@
   }
   .force-mobile .chart-source{ font-size:11px; line-height:1.4; }
   .force-mobile #page-data section, .force-mobile #page-specs section{ padding-top:0; }
+
+  /* ---------- the product name ----------
+     Reach is a name, but it is also an ordinary English word, so in running text it can
+     read as a verb and disappear. Setting it in the display face with tightened spacing
+     and the brand tint marks it as a proper noun at a glance, the way a wordmark does,
+     without needing capitals or a trademark symbol. */
+  .product-name{
+    font-family:'Space Grotesk', system-ui, sans-serif;
+    font-weight:700;
+    letter-spacing:-0.015em;
+    color:var(--primary);
+  }
+  /* Inside the dark status panel the brand green is too low-contrast, so it takes the
+     panel's own bright ink and separates itself by weight and spacing instead. */
+  .scope-label .product-name{
+    color:#eaf6f1;
+    letter-spacing:0.08em;
+    font-weight:600;
+  }
+  /* On the phone dashboard the name is the page title, so it keeps the ink colour and
+     carries the display face alone -- a green heading there would read as a link. */
+  .force-mobile .dash-title .product-name{
+    color:var(--ink);
+    letter-spacing:-0.025em;
+  }

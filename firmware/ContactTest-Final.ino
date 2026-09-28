@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28f AC check + EMG excursion";
+const char FIRMWARE_VERSION[] = "2026-09-28g EMG relay ordering";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -690,6 +690,7 @@ void runContactTest() {
 // been tuned on real data, and guessing at one here would be the same mistake as the
 // invented GOOD_CONTACT_MULTIPLE was before it got tuned against something real.
 void runEmgReading() {
+  moduleSwitch(true);   // a single reading needs the module connected just as streaming does
   Serial.println("--- EMG READING STARTED ---");
   contactCircuitOff();
   delay(EMG_SETTLE_MS);
@@ -934,10 +935,15 @@ void loop() {
       runEmgReading();
     } else if (input == "EMG_STREAM_START") {
       emgStreaming = true;
-      emgRestValid = false;     // re-learn rest for this session's electrodes
       lastEmgStreamSampleTime = millis();
       contactCircuitOff();
-      delay(EMG_SETTLE_MS);   // let the amplifier recover before the first sample goes out
+      // The relay has to close BEFORE the settle, not after. Reconnecting the module to
+      // the electrodes steps its inputs, and the amplifier needs the settle to recover
+      // from that -- reconnecting afterwards meant the first samples, and therefore the
+      // resting level learned from them, came out of the middle of that transient.
+      moduleSwitch(true);
+      delay(EMG_SETTLE_MS);
+      emgRestValid = false;     // re-learn rest now that the amplifier has settled
       Serial.println("EMG_STREAM:started");
     } else if (input == "EMG_STREAM_STOP") {
       emgStreaming = false;

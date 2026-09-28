@@ -407,7 +407,21 @@ window.Neurova = window.Neurova || {};
   let boardBaseline = null;
   let boardConfig = null;        // {fixedResistorOhms, adcReferenceV} as reported by CONFIG
   let savedAccountCalib = null;
-  const SAMPLE_WINDOW_MS = 2500; // matches the Arduino's own ~3s sampling loop, just for the progress ring
+  // How long CALIBRATE and TEST actually take on the board, for the progress ring only.
+  // Both run the same sequence, and it grew considerably when the check moved to AC:
+  //
+  //   relay settling before the measurement                        ~15 ms
+  //   the path check, two reads either side of a 1200 ms settle  ~2470 ms
+  //   10 samples x (32-cycle AC measurement ~73 ms + 300 ms gap)  ~3730 ms
+  //   printing each sample's line back at 9600 baud               ~420 ms
+  //
+  // The 1200 ms settles dominate and are inherited from the DC path check, which an AC
+  // measurement does not actually need -- worth revisiting, and this constant should
+  // follow it down when it happens.
+  //
+  // Rounded UP: a ring that reaches full and then waits reads as a hang, while one still
+  // climbing when the result lands simply completes.
+  const SAMPLE_WINDOW_MS = 6800;
 
   const goTestBtn = document.getElementById('goTestBtn');
   const runTestBtn = document.getElementById('runTestBtn');

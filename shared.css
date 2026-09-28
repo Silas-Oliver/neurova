@@ -818,7 +818,18 @@
   }
   .force-mobile .btn:active{ transform:scale(0.97); opacity:0.85; }
   .force-mobile .hero-actions .btn{ width:100%; }
-  .force-mobile .btn-ghost{ background:transparent; border:none; color:var(--primary); }
+  .force-mobile .btn-ghost{
+    background:rgba(47,110,99,0.10);
+    border:none;
+    color:var(--primary);
+    text-decoration:none;
+  }
+  /* The hero's second action is genuinely a link onward, not a peer of the button above
+     it, so that one stays plain. */
+  .force-mobile .hero-actions .btn-ghost{ background:transparent; }
+  /* Two secondary actions side by side, as they are on desktop, rather than stacked. */
+  .force-mobile .auth-actions{ display:flex; flex-wrap:wrap; gap:10px; }
+  .force-mobile .auth-actions .btn{ flex:1 1 auto; }
 
   /* The tab bar replaces the hamburger, so the menu affordances go away entirely. */
   .force-mobile .hamburger,
@@ -1028,8 +1039,8 @@
   }
   .force-mobile .data-chart-wrap{ border:none; padding:16px; }
   .force-mobile .mini-feed{
-    background:var(--ios-card); border-radius:var(--radius-lg);
-    padding:12px; font-size:12px;
+    border-radius:var(--radius-lg);
+    padding:12px 14px; font-size:12px;
   }
 
   /* The dock floats above the content, so the page has to reserve its full height plus

@@ -1919,7 +1919,24 @@ window.Neurova = window.Neurova || {};
     return new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
   }
 
-  function triggerDownload(blob, filename){
+  async function triggerDownload(blob, filename){
+    // An anchor with a download attribute is the desktop answer and does nothing visible
+    // on iOS, where WebKit ignores it for blob URLs -- which is why Export my data
+    // appeared dead on a phone. The share sheet is the platform's own way to save a file,
+    // so try that first where it exists, and fall back to the anchor everywhere else.
+    if(navigator.canShare && navigator.share && window.File){
+      try{
+        const file = new File([blob], filename, { type: blob.type });
+        if(navigator.canShare({ files: [file] })){
+          await navigator.share({ files: [file], title: filename });
+          return;
+        }
+      }catch(err){
+        // Dismissing the sheet is a decision, not a failure -- don't then download behind
+        // their back. Anything else falls through to the anchor.
+        if(err && err.name === 'AbortError') return;
+      }
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1927,14 +1944,16 @@ window.Neurova = window.Neurova || {};
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Revoking immediately can cancel the download on some browsers before it has read
+    // the blob, so give it a moment.
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
   async function exportMyData(){
     // Common case: we already have a cached profile (login always fetches one), so this
     // is fully synchronous and the download fires in the same tick as the click.
     if(cachedProfile !== null){
-      triggerDownload(buildExportBlob(), 'neurova-account-data.json');
+      await triggerDownload(buildExportBlob(), 'neurova-account-data.json');
       return;
     }
     // Rare fallback: nothing cached yet (e.g. clicked right after login before the
@@ -1949,7 +1968,7 @@ window.Neurova = window.Neurova || {};
       } else {
         cachedProfile = {};
       }
-      triggerDownload(buildExportBlob(), 'neurova-account-data.json');
+      await triggerDownload(buildExportBlob(), 'neurova-account-data.json');
     }catch(e){
       console.error('Export failed:', e);
       deleteError = ''; // unrelated field, just being explicit we're not touching it

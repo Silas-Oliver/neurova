@@ -1031,9 +1031,12 @@
   /* The explanatory paragraph belongs on desktop; on a phone it pushes the actual data
      off the first screen. The heading alone carries it. */
   .force-mobile #page-data .section-head p{ display:none; }
-  /* These wraps carry inline 56px padding meant for desktop, so overriding needs weight. */
-  .force-mobile #page-data > section > .wrap,
-  .force-mobile #page-specs > section > .wrap{
+  /* Every sub-page's wrap carries inline 56px padding meant for desktop, which on a phone
+     is most of a screen of nothing before the content starts. Overriding an inline style
+     needs !important, and this matches any such wrap rather than naming pages one by one
+     -- listing them is how test-menu and account were missed the first time. The home
+     page is unaffected: its .wrap is an ancestor of .page, not a child of its sections. */
+  .force-mobile .page > section > .wrap{
     padding-top:14px !important;
     padding-bottom:20px !important;
   }

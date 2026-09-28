@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28h EMG revert, AC check kept";
+const char FIRMWARE_VERSION[] = "2026-09-28i flex sensor";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -114,6 +114,21 @@ const float MODULE_ABSENT_MIN_RAW = 900.0;
 // 1 ms half-period = 500 Hz, the top of the EMG band and the best-conditioned point in the
 // sweep: 10 and 100 Hz both sat near full scale where the reading says only "very high".
 const int CONTACT_AC_HALF_MS = 1;
+// Flex sensor: a resistor that changes with bend angle, on its own pins so it shares
+// nothing with the contact check or the EMG module -- no relay, no switching, no
+// interference. Driven from a pin rather than 5V for the same reason the contact divider
+// is: the firmware can release it between reads, and the measurement is ratiometric, so
+// supply sag cancels out of the ratio instead of skewing every reading.
+//
+//   D5 --[flex]--+-- A2
+//                +--[FLEX_FIXED_RESISTOR]-- GND
+//
+// Starting at 100k because that is what is to hand; the right value is near the geometric
+// mean of the sensor's flat and bent resistance, which the first readings will show.
+const int FLEX_PIN = A2;
+const int FLEX_DRIVE_PIN = 5;
+const float FLEX_FIXED_RESISTOR = 100000.0;
+const int FLEX_OVERSAMPLE = 32;
 const int MODULE_RELAY_PIN = 4;
 const int RELAY_SETTLE_MS = 15;
 
@@ -738,6 +753,37 @@ const char *const DIGIT_COMMANDS[] PROGMEM = {
 
 char lastCommand[20] = "";
 
+// ---------------- flex sensor ----------------
+//
+// Purely resistive, so unlike the contact check there is no capacitance to wait out -- a
+// couple of milliseconds after the drive pin goes high is enough.
+float readFlexRaw(){
+  pinMode(FLEX_DRIVE_PIN, OUTPUT);
+  digitalWrite(FLEX_DRIVE_PIN, HIGH);
+  delay(3);
+  analogRead(FLEX_PIN);                 // discard: lets the sample-and-hold settle
+  long sum = 0;
+  for(int i = 0; i < FLEX_OVERSAMPLE; i++) sum += analogRead(FLEX_PIN);
+  pinMode(FLEX_DRIVE_PIN, INPUT);       // release it again
+  return (float)sum / FLEX_OVERSAMPLE;
+}
+
+void runFlexReading(){
+  float raw = readFlexRaw();
+  Serial.print(F("FLEX raw="));
+  Serial.print(raw, 1);
+  // The sensor is the TOP leg, so the junction rises as the sensor's resistance falls:
+  //   V = 5 * Rfixed / (Rflex + Rfixed)  ->  Rflex = Rfixed * (full - raw) / raw
+  if(raw < 1.0 || raw >= ADC_MAX_COUNTS - 0.5){
+    Serial.println(F("  (out of range -- check the wiring and the fixed resistor)"));
+    return;
+  }
+  float ohms = FLEX_FIXED_RESISTOR * (ADC_MAX_COUNTS - raw) / raw;
+  Serial.print(F("  R="));
+  Serial.print(ohms, 0);
+  Serial.println(F(" ohms"));
+}
+
 // ---------------- AC contact measurement ----------------
 //
 // The DC check measures the wrong quantity for a dry electrode. Dry skin's outer layer is
@@ -830,7 +876,7 @@ void printMenu() {
   Serial.println(F("  3 DIAG             8 VERSION"));
   Serial.println(F("  4 STATUS           9 FORGET (clears saved baseline)"));
   Serial.println(F("  5 EMG              0 repeat last"));
-  Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | MENU"));
+  Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | FLEX | MENU"));
 }
 
 // Turns a bare digit into the command it stands for, leaving anything else untouched.
@@ -879,6 +925,8 @@ void loop() {
         Serial.println("Warning: not calibrated yet, using default thresholds.");
       }
       runContactTest();
+    } else if (input == "FLEX") {
+      runFlexReading();
     } else if (input == "AC") {
       runAcTest(5);
     } else if (input.startsWith("AC:")) {

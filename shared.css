@@ -878,3 +878,74 @@
   .force-mobile .log, .force-mobile .raw-log, .force-mobile .chart-scroll{
     -webkit-overflow-scrolling:touch;
   }
+
+  /* ---------- iOS mobile: dark mode ----------
+     The site had no dark scheme at all, so a phone set to dark was left to the browser's
+     automatic inversion, which fights hand-picked colours and produces muddy greys. This
+     declares a real one. Overriding the root custom properties means every existing
+     component follows without being restyled individually, and color-scheme tells the
+     browser to stop force-darkening because the page handles it. */
+  .force-mobile{ color-scheme:light dark; }
+  @media (prefers-color-scheme: dark){
+    .force-mobile{
+      --ios-grouped:#000000;     /* iOS puts grouped content on true black */
+      --ios-card:#1c1c1e;
+      --ios-sep:rgba(84,84,88,0.65);
+      --ios-secondary:rgba(235,235,245,0.6);
+      --bg:#000000;
+      --panel:#1c1c1e;
+      --ink:#f2f2f7;
+      --muted:rgba(235,235,245,0.6);
+      --line:rgba(84,84,88,0.5);
+      --line-strong:rgba(84,84,88,0.85);
+      /* The brand green is too dark to read on black, so the tint lifts while staying
+         recognisably the same colour. */
+      --primary:#4fb99f;
+      --primary-ink:#04120e;
+      --grid:rgba(79,185,159,0.14);
+      --shadow:0 1px 2px rgba(0,0,0,0.5);
+    }
+    .force-mobile .site-header{ background:rgba(0,0,0,0.72); }
+    .force-mobile .ios-tabbar{ background:rgba(22,22,24,0.88); }
+    .force-mobile .scope, .force-mobile .test-card, .force-mobile .test-featured,
+    .force-mobile .wiring-card, .force-mobile .how-step, .force-mobile .meter-panel,
+    .force-mobile .menu-option, .force-mobile .spec, .force-mobile .verdict-box,
+    .force-mobile .data-chart-wrap, .force-mobile .emg-scope, .force-mobile .auth-card{
+      background:var(--ios-card);
+      box-shadow:none;
+    }
+    .force-mobile input, .force-mobile select, .force-mobile textarea{
+      background:#1c1c1e; color:var(--ink); border-color:var(--line);
+    }
+  }
+
+  /* ---------- iOS mobile: horizontal card rows ----------
+     These sets were designed as multi-column rows and were collapsing to one column on a
+     phone, turning the page into a very long scroll. Rows of swipeable cards keep the
+     horizontal reading the content was written for, and match how iOS presents groups of
+     cards. They bleed to the screen edges so a card is visibly cut off, which is what
+     tells you the row scrolls. */
+  .force-mobile .test-grid,
+  .force-mobile .wiring-grid,
+  .force-mobile .how-steps{
+    display:flex;
+    grid-template-columns:none;      /* these are grids at wider widths */
+    gap:12px;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    margin-inline:-18px;             /* matches .wrap's mobile gutter */
+    padding:2px 18px 8px;
+    scroll-padding-left:18px;
+  }
+  .force-mobile .test-grid::-webkit-scrollbar,
+  .force-mobile .wiring-grid::-webkit-scrollbar,
+  .force-mobile .how-steps::-webkit-scrollbar{ display:none; }
+  .force-mobile .test-grid > *,
+  .force-mobile .wiring-grid > *,
+  .force-mobile .how-steps > *{
+    flex:0 0 80%;
+    scroll-snap-align:start;
+  }
+  /* Specs read as a comparison, so they stay a grid -- just two across rather than one. */
+  .force-mobile .specs{ grid-template-columns:1fr 1fr; }

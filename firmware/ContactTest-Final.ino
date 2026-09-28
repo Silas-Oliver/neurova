@@ -57,12 +57,12 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-27g numeric shortcuts";
+const char FIRMWARE_VERSION[] = "2026-09-28a 100k divider + EMG shunt";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
 const int CONTACT_SINK_PIN = 3;    // return leg — LOW to measure, INPUT to disconnect
-const float FIXED_RESISTOR = 1000000.0;  // the fixed leg of the divider, in ohms
+const float FIXED_RESISTOR = 100000.0;   // the fixed leg of the divider, in ohms
 
 // Kept as named constants because they are board characteristics, not arbitrary numbers:
 // moving to a 3.3V / 12-bit board later (an ESP32 or Nano 33 BLE for the Bluetooth work)
@@ -72,6 +72,42 @@ const int ADC_MAX_COUNTS = 1023;
 
 // Above this raw ADC value the divider is reading essentially open — no skin path at all.
 const int OPEN_CIRCUIT_RAW = 1015;
+
+// Declared here because the Arduino preprocessor inserts function prototypes above the
+// first function in the file, and those prototypes reference these types.
+enum PathState { PATH_OK, PATH_NO_CONTACT, PATH_BLOCKED };
+enum ContactState {
+  NO_CONTACT,
+  POOR_CONTACT,
+  GOOD_CONTACT
+};
+
+// The EMG module's inputs are permanently wired to the same electrodes, and they are not a
+// short: measured on this rig as roughly 63 kOhm to an internal 1.40 V bias (from the
+// HIGH-vs-LOW swing with the jack in and no electrodes attached, 331.01 / 270.04, a gap of
+// 60.5 counts, which those two values predict to within half a count). That is soft enough
+// to measure skin straight through, which is why the divider is 100 kOhm rather than 1 MOhm
+// and why no analog switch is needed to share electrodes between the two circuits.
+const float EMG_SHUNT_OHMS = 63000.0;
+const float EMG_BIAS_V = 1.40;
+// With the module connected the junction tops out near 571 counts, so a reading above this
+// can only mean the module is absent and the junction is floating free.
+const float MODULE_ABSENT_MIN_RAW = 900.0;
+
+// Whether the EMG module is currently loading the divider. Set from a measurement rather
+// than assumed, so one firmware measures correctly with the jack in or out.
+bool moduleConnected = false;
+float lastPathReleased = 0, lastPathSinking = 0;
+
+// The reading that means "no skin path at all" under present conditions. With the module
+// unplugged that is the junction floating to the top of the range; with it connected the
+// module's bias holds it far lower, and comparing against a fixed constant would report
+// every open electrode as a valid measurement.
+float openThresholdRaw() {
+  if (!moduleConnected) return OPEN_CIRCUIT_RAW;
+  return lastPathReleased - 12.0;   // a few counts of margin below the measured open value
+}
+
 
 // How long the amplifier and the divider need after a mode change before a reading can be
 // trusted — switching the drive pin steps the voltage on the electrodes, and the EMG
@@ -86,7 +122,10 @@ const int CONTACT_SETTLE_MS = 50;
 // capacitor time to actually reach the junction voltage. And averaging many readings cuts
 // random noise by the square root of the count: 256 samples turns +/-70 counts into about
 // +/-4, which is the difference between a signal buried in noise and one that is legible.
-const int CONTACT_OVERSAMPLE = 256;
+// 100 kOhm puts the ADC's source impedance within a few multiples of its 10 kOhm spec
+// instead of a hundred times past it, so far less averaging is needed than the 1 MOhm
+// divider demanded. 64 samples still divides random noise by 8 and keeps a reading brief.
+const int CONTACT_OVERSAMPLE = 64;
 const unsigned int CONTACT_ADC_SETTLE_US = 400;
 
 // How far the sink pin must be able to move the junction for the reading to mean
@@ -156,13 +195,7 @@ unsigned long lastEmgStreamSampleTime = 0;
 // Declared up here rather than beside its function: the IDE inserts generated prototypes
 // above the first function, and a return type defined later in the file is not yet known
 // at that point.
-enum PathState { PATH_OK, PATH_NO_CONTACT, PATH_BLOCKED };
 
-enum ContactState {
-  NO_CONTACT,
-  POOR_CONTACT,
-  GOOD_CONTACT
-};
 
 // ---------------- baseline storage ----------------
 
@@ -230,7 +263,7 @@ bool readResistance(float rawReading, float &resistanceOut) {
   // junction floating up through the fixed resistor with no path to the sink pin.
   // A reading of zero is the opposite: a dead short, i.e. perfect contact. Treating it
   // as unmeasurable reported the best possible contact as no contact at all.
-  if (rawReading >= OPEN_CIRCUIT_RAW || rawReading < 0) {
+  if (rawReading >= openThresholdRaw() || rawReading < 0) {
     resistanceOut = -1;
     return false;
   }
@@ -240,7 +273,19 @@ bool readResistance(float rawReading, float &resistanceOut) {
     return false;
   }
   // Skin sits on the low side, so the junction voltage rises with skin resistance.
-  resistanceOut = voltage * FIXED_RESISTOR / (ADC_REFERENCE_V - voltage);
+  //
+  // Current into the junction has to equal current out of it. Without the module that is
+  // just the fixed resistor against the skin. With the module connected its 63 kOhm to
+  // 1.40 V feeds the junction too, and ignoring it would report the parallel combination
+  // of skin and module as though it were skin alone -- reading 27 kOhm skin as 19 kOhm,
+  // and an open electrode as 63 kOhm rather than infinity.
+  float feedCurrent = (ADC_REFERENCE_V - voltage) / FIXED_RESISTOR;
+  if (moduleConnected) feedCurrent += (EMG_BIAS_V - voltage) / EMG_SHUNT_OHMS;
+  if (feedCurrent <= 0) {
+    resistanceOut = -1;
+    return false;
+  }
+  resistanceOut = voltage / feedCurrent;
   return true;
 }
 
@@ -347,8 +392,6 @@ void runDiagnostics() {
 // Absolute level cannot be the test on its own: wearing the electrodes, the body itself
 // leaks to ground -- measured here around 780k -- so the released reading never reaches
 // the rail while anyone is actually wearing them.
-float lastPathReleased = 0, lastPathSinking = 0;
-
 PathState contactPathState() {
   pinMode(CONTACT_DRIVE_PIN, OUTPUT);
   digitalWrite(CONTACT_DRIVE_PIN, HIGH);
@@ -366,6 +409,7 @@ PathState contactPathState() {
   pinMode(CONTACT_SINK_PIN, INPUT);
   lastPathReleased = released;
   lastPathSinking = sinking;
+  moduleConnected = (released < MODULE_ABSENT_MIN_RAW);
 
   if ((released - sinking) >= CONTACT_PATH_CONTROL_MIN) return PATH_OK;
   // A line that is genuinely blocked is held DOWN, so the deciding question is where the

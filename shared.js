@@ -761,8 +761,23 @@ window.Neurova = window.Neurova || {};
 
     let minV, maxV;
     if(emgPhase === 'live' && emgYAxisMin !== null && emgYAxisMax !== null){
+      // The fixed range is derived from resting standard deviation, which is deliberately
+      // tight so small movements are legible. A real contraction is far larger than any
+      // resting wobble -- hundreds of counts against a few -- so it would simply run off
+      // the top of that scale and flatten against the edge, hiding exactly the part worth
+      // seeing. The baseline range is therefore a MINIMUM rather than the whole story:
+      // it still sets how sensitive the chart is at rest, and the axis opens up only as
+      // far as the visible data actually needs.
       minV = emgYAxisMin;
       maxV = emgYAxisMax;
+      let dataMin = Infinity, dataMax = -Infinity;
+      emgPlotPoints.forEach(p => { dataMin = Math.min(dataMin, p.raw); dataMax = Math.max(dataMax, p.raw); });
+      if(dataMax > dataMin){
+        // A little padding so a peak sits below the edge rather than touching it.
+        const pad = (dataMax - dataMin) * 0.08;
+        minV = Math.max(0, Math.min(minV, dataMin - pad));
+        maxV = Math.min(1023, Math.max(maxV, dataMax + pad));
+      }
     } else {
       // Still finding the baseline — auto-scale just enough to show the capture is alive;
       // the real fixed range only exists once the baseline itself exists.

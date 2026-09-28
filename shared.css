@@ -949,3 +949,64 @@
   }
   /* Specs read as a comparison, so they stay a grid -- just two across rather than one. */
   .force-mobile .specs{ grid-template-columns:1fr 1fr; }
+
+  /* ---------- iOS mobile: dashboard home ----------
+     A device app opens on what the device is doing. The desktop home opens on an
+     explanation of the product, which is right for a browser and wrong for a phone, so the
+     phone gets its own home: status first, two live metrics, then a tile grid. The
+     marketing sections are hidden here rather than stacked below it -- that prose is what
+     made the page feel like a desktop site poured into a narrow column, and it still lives
+     on desktop and under About. */
+  .ios-dash{ display:none; }
+  .force-mobile .ios-dash{ display:block; padding:4px 0 8px; }
+  .force-mobile #page-home .hero,
+  .force-mobile #page-home #how,
+  .force-mobile #page-home #under-the-hood{ display:none; }
+
+  .force-mobile .dash-title{ font-size:30px; margin:8px 0 14px; }
+
+  .force-mobile .dash-status{
+    display:block; text-decoration:none; color:inherit;
+    background:var(--ios-card);
+    border-radius:18px;
+    padding:16px 18px;
+    margin-bottom:10px;
+    transition:transform .12s ease;
+  }
+  .force-mobile .dash-status:active{ transform:scale(0.985); }
+  .force-mobile .dash-status-row{ display:flex; align-items:center; gap:9px; }
+  .force-mobile .dash-dot{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--muted); flex:0 0 auto;
+  }
+  .force-mobile .dash-dot.ok{ background:var(--good); }
+  .force-mobile .dash-dot.bad{ background:var(--bad); }
+  .force-mobile .dash-status-text{ font-size:17px; font-weight:600; }
+  .force-mobile .dash-status-sub{
+    font-size:13px; color:var(--ios-secondary); margin-top:3px; padding-left:18px;
+  }
+
+  /* Two numbers side by side: the whole point of the screen is what was measured. */
+  .force-mobile .dash-metrics{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .force-mobile .dash-metric{
+    background:var(--ios-card); border-radius:18px; padding:14px 16px;
+  }
+  .force-mobile .dash-metric-label{
+    display:block; font-size:12px; color:var(--ios-secondary);
+    letter-spacing:0.01em; margin-bottom:4px;
+  }
+  .force-mobile .dash-metric b{ font-size:22px; font-weight:650; letter-spacing:-0.02em; }
+
+  .force-mobile .dash-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .force-mobile .dash-tile{
+    display:flex; flex-direction:column; gap:5px;
+    background:var(--ios-card); border-radius:18px;
+    padding:15px 16px 17px;
+    text-decoration:none; color:inherit;
+    min-height:112px;
+    transition:transform .12s ease;
+  }
+  .force-mobile .dash-tile:active{ transform:scale(0.97); }
+  .force-mobile .dash-tile svg{ width:23px; height:23px; color:var(--primary); margin-bottom:5px; }
+  .force-mobile .dash-tile b{ font-size:15px; font-weight:600; }
+  .force-mobile .dash-tile span{ font-size:12.5px; color:var(--ios-secondary); line-height:1.35; }

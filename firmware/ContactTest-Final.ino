@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-28j flex calibration + stream";
+const char FIRMWARE_VERSION[] = "2026-09-30a rail voltmeter";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -129,6 +129,19 @@ const int FLEX_PIN = A2;
 const int FLEX_DRIVE_PIN = 5;
 const float FLEX_FIXED_RESISTOR = 100000.0;
 const int FLEX_OVERSAMPLE = 32;
+// Reads the EMG module's positive rail through a 2:1 divider, so the Arduino can act as a
+// voltmeter for the one thing we otherwise cannot see. The LED test only proves a rail
+// EXISTS -- an LED lights from about 2 V -- and a resistive virtual ground fails by
+// drifting, not by disappearing. A supply sitting at +7/-2 lights both LEDs and is still
+// below the sensor's minimum.
+//
+//   +Vs --[100k]--+-- A3
+//                 +--[100k]-- GND
+//
+// The divider halves it, so even a full 9 V on +Vs arrives at 4.5 V and cannot harm the
+// pin. It draws about 45 uA, far too little to disturb what it is measuring.
+const int RAIL_PIN = A3;
+const float RAIL_DIVIDER_RATIO = 2.0;
 const int MODULE_RELAY_PIN = 4;
 const int RELAY_SETTLE_MS = 15;
 
@@ -763,6 +776,30 @@ const char *const DIGIT_COMMANDS[] PROGMEM = {
 
 char lastCommand[20] = "";
 
+void runRailReading(){
+  analogRead(RAIL_PIN);                 // discard, let the sample-and-hold settle
+  long sum = 0;
+  for(int i = 0; i < 32; i++) sum += analogRead(RAIL_PIN);
+  float raw = (float)sum / 32;
+  float volts = raw * (ADC_REFERENCE_V / ADC_MAX_COUNTS) * RAIL_DIVIDER_RATIO;
+  Serial.print(F("RAIL +Vs="));
+  Serial.print(volts, 2);
+  Serial.print(F(" V  (raw "));
+  Serial.print(raw, 1);
+  Serial.println(F(")"));
+  // A split supply made from one battery should sit near half of it on each side. Far off
+  // centre means the midpoint is being dragged by uneven current draw, which is the known
+  // weakness of a resistive virtual ground.
+  if(volts < 3.5){
+    Serial.println(F("Below the sensor's minimum -- it cannot work at this voltage."));
+  } else if(volts > 5.5){
+    Serial.println(F("High: the midpoint has drifted up, so -Vs is correspondingly small."));
+    Serial.println(F("Halve both divider resistors to hold the middle more firmly."));
+  } else {
+    Serial.println(F("In range. The supply is not what is stopping it."));
+  }
+}
+
 // ---------------- flex sensor ----------------
 //
 // Purely resistive, so unlike the contact check there is no capacitance to wait out -- a
@@ -958,7 +995,7 @@ void printMenu() {
   Serial.println(F("  4 STATUS           9 FORGET (clears saved baseline)"));
   Serial.println(F("  5 EMG              0 repeat last"));
   Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | MENU"));
-  Serial.println(F("  FLEX | FLEXCAL:FLAT | FLEXCAL:BENT | FLEXCAL:STATUS"));
+  Serial.println(F("  RAIL | FLEX | FLEXCAL:FLAT | FLEXCAL:BENT | FLEXCAL:STATUS"));
   Serial.println(F("  FLEX_STREAM_START | FLEX_STREAM_STOP"));
 }
 
@@ -1008,6 +1045,8 @@ void loop() {
         Serial.println("Warning: not calibrated yet, using default thresholds.");
       }
       runContactTest();
+    } else if (input == "RAIL") {
+      runRailReading();
     } else if (input == "FLEX") {
       runFlexReading();
     } else if (input == "FLEXCAL:FLAT") {

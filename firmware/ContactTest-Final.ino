@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-09-30a rail voltmeter";
+const char FIRMWARE_VERSION[] = "2026-10-01a rail settling fix";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -135,8 +135,12 @@ const int FLEX_OVERSAMPLE = 32;
 // drifting, not by disappearing. A supply sitting at +7/-2 lights both LEDs and is still
 // below the sensor's minimum.
 //
-//   +Vs --[100k]--+-- A3
-//                 +--[100k]-- GND
+//   +Vs --[10k]--+-- A3
+//                +--[10k]-- GND
+//
+// 10k, not 100k: a 100k pair presents ~50k to the pin, five times past the ATmega's 10k
+// source-impedance limit, and readings taken through it drift and contradict themselves.
+// 10k presents 5k, inside spec, and still draws under half a milliamp.
 //
 // The divider halves it, so even a full 9 V on +Vs arrives at 4.5 V and cannot harm the
 // pin. It draws about 45 uA, far too little to disturb what it is measuring.
@@ -777,10 +781,21 @@ const char *const DIGIT_COMMANDS[] PROGMEM = {
 char lastCommand[20] = "";
 
 void runRailReading(){
-  analogRead(RAIL_PIN);                 // discard, let the sample-and-hold settle
+  // One discard is not enough at any real source impedance. The first reading of this pin
+  // after another channel carries charge left on the sample-and-hold from that channel,
+  // and a divider that cannot refill the capacitor between conversions produces readings
+  // that drift and depend on what was measured before -- which is exactly how the first
+  // rail numbers came out unstable and inconsistent. Discard twice with a pause, then
+  // average with a gap between conversions.
+  analogRead(RAIL_PIN);
+  delayMicroseconds(500);
+  analogRead(RAIL_PIN);
   long sum = 0;
-  for(int i = 0; i < 32; i++) sum += analogRead(RAIL_PIN);
-  float raw = (float)sum / 32;
+  for(int i = 0; i < 64; i++){
+    delayMicroseconds(200);
+    sum += analogRead(RAIL_PIN);
+  }
+  float raw = (float)sum / 64;
   float volts = raw * (ADC_REFERENCE_V / ADC_MAX_COUNTS) * RAIL_DIVIDER_RATIO;
   Serial.print(F("RAIL +Vs="));
   Serial.print(volts, 2);

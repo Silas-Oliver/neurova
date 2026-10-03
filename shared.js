@@ -205,15 +205,19 @@ window.Neurova = window.Neurova || {};
   // changed on a timer, so a static band earns a second look. One panel rather than a
   // featured-plus-four, which is what makes it readable at this size.
   (function(){
+    // The tests themselves, in the order the test menu runs them -- not assorted facts
+    // about the project. Each one is a thing you can actually go and do.
     const SHOW_SLIDES = [
-      { pill:'Contact',  title:'Every Test Starts<br>With Contact Quality',
+      { pill:'Contact check', title:'Every Test Starts<br>With Contact Quality',
         sub:'Loose contact and a stalled nerve look identical. One of them is fixable in seconds.' },
-      { pill:'Dry',      title:'Dry Electrodes,<br>No Gel Required',
-        sub:'Measured on AC, where dry skin is readable and a steady voltage is not.' },
-      { pill:'Personal', title:'Your Baseline,<br>Not A Fixed Number',
+      { pill:'Calibration',   title:'Your Baseline,<br>Not A Fixed Number',
         sub:'Skin varies between people and across a day. Every reading is judged against your own.' },
-      { pill:'Repeat',   title:'One Percent,<br>Session To Session',
-        sub:'Glove on, glove off, three times over. The reading barely moved.' }
+      { pill:'EMG',           title:'Watch The Muscle<br>Before The Hand Moves',
+        sub:'Electrical activity reaches the skin whether or not the finger follows.' },
+      { pill:'Flex',          title:'How Far It Actually<br>Moved, In Degrees',
+        sub:'Bend angle across the finger, measured against your own open and closed hand.' },
+      { pill:'Sessions',      title:'One Reading Means<br>Little. Twenty Mean A Trend.',
+        sub:'Every run logged and plotted, so change over weeks is visible rather than remembered.' }
     ];
     const band = document.getElementById('ecShow');
     const body = document.getElementById('ecShowBody');
@@ -253,6 +257,14 @@ window.Neurova = window.Neurova || {};
     paint();
     restart();
     // Stop advancing while someone is reading it.
+    // Clicking anywhere on the band advances it, so the dots are a shortcut rather than
+    // the only way through. The dots stop the click bubbling into a second advance.
+    band.addEventListener('click', () => go((idx + 1) % SHOW_SLIDES.length));
+    band.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go((idx + 1) % SHOW_SLIDES.length); }
+    });
+    dots.addEventListener('click', e => e.stopPropagation());
+
     band.addEventListener('mouseenter', () => { if(timer) clearInterval(timer); });
     band.addEventListener('mouseleave', restart);
   })();

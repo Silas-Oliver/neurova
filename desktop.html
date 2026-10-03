@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261003-3">
+<link rel="stylesheet" href="shared.css?v=20261003-5">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -67,18 +67,49 @@
 
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-grid">
-      <div>
-        <div class="eyebrow">Wearable nerve-repair tracking</div>
-        <h1><span class="product-name">Reach</span> is a compression glove that watches how a damaged nerve recovers, one worn session at a time.</h1>
-        <p class="lede">Electrodes built into the glove pick up electrical activity from the hand as a nerve heals, so change over weeks can be tracked instead of guessed at. This page runs the growing set of tests behind that tracking — checking electrode contact, capturing a personal baseline, timing reaction speed, and logging sessions over time.</p>
+    <div class="hero-panel">
+      <svg class="hero-trace" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+        <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,200 90,200 110,120 128,268 148,200 300,200 318,96 338,284 356,200 520,200 540,150 558,250 576,200 760,200 780,60 800,300 820,200 1000,200 1020,140 1038,262 1056,200 1200,200"/>
+      </svg>
+      <div class="hero-inner">
+        <span class="pill">Nerve recovery, measured</span>
+        <h1>Progress you can<br><span class="muted-line">see, not just feel.</span></h1>
+        <p class="lede">A compression glove that reads the nerve, not the guesswork.</p>
         <div class="hero-actions">
-          <button class="btn btn-primary" id="heroConnectBtn">Connect the board</button>
-          <a href="#test-menu" data-nav="test-menu" class="btn btn-ghost">Open the test menu</a>
+          <button class="btn btn-pill" id="heroConnectBtn">Connect the board <span class="btn-arrow">&rarr;</span></button>
+          <a href="#test-menu" data-nav="test-menu" class="btn btn-pill-ghost">See the tests</a>
         </div>
+      </div>
+      <div class="hero-float">
+        <div class="hero-float-num">38<span>kΩ</span></div>
+        <div class="hero-float-label">Dry-electrode contact,<br>repeatable to 1%</div>
       </div>
     </div>
   </section>
+
+  <section class="stat-row">
+    <div class="stat-card stat-light">
+      <span class="pill pill-sm">Contact</span>
+      <div class="stat-num">500<span>Hz</span></div>
+      <p>Measured on AC, the only thing that reads dry skin.</p>
+    </div>
+    <div class="stat-card stat-dark">
+      <span class="pill pill-sm pill-on-dark">Repeatability</span>
+      <div class="stat-num">1<span>%</span></div>
+      <p>Across glove on, glove off, three times over.</p>
+      <svg class="stat-bars" viewBox="0 0 160 56" aria-hidden="true">
+        <rect x="0" y="14" width="22" height="42" rx="3"/><rect x="34" y="8" width="22" height="48" rx="3"/>
+        <rect x="68" y="12" width="22" height="44" rx="3"/><rect x="102" y="4" width="22" height="52" rx="3"/>
+        <rect x="136" y="10" width="22" height="46" rx="3"/>
+      </svg>
+    </div>
+    <div class="stat-card stat-accent">
+      <span class="pill pill-sm pill-on-dark">Sensors</span>
+      <div class="stat-num">3</div>
+      <p>EMG, flex and contact, on one glove.</p>
+    </div>
+  </section>
+
   <section class="status-band full-bleed" id="statusBand">
     <div class="status-band-inner">
       <div class="scope is-sample" id="heroScope">
@@ -105,8 +136,9 @@
   <!-- ROADMAP -->
   <section id="roadmap">
     <div class="section-head">
-      <h2>Five tests, one recovery picture</h2>
-      <p>Contact check and calibration are built and working in the panel below. Reaction-time testing and baseline recording are up next. Together, these are what session logging and long-term recovery tracking get built on top of.</p>
+      <span class="pill">Tests</span>
+        <h2>Five tests,<br><span class="muted-line">one recovery picture</span></h2>
+      <p>Two are working. Three are next.</p>
     </div>
     <div class="roadmap-layout" id="roadmapLayout">
       <div class="test-featured" id="testFeatured"></div>
@@ -117,8 +149,9 @@
   <!-- HOW IT WORKS -->
   <section id="how">
     <div class="section-head">
-      <h2>Why every test starts with contact quality</h2>
-      <p>Every reading the glove takes — resistance, reaction time, baseline signal, or anything logged later — rides on top of skin-electrode contact. If that contact is loose or uneven, changes from a shifting glove can look exactly like changes in the underlying signal — which is the one thing you can't afford when the whole point is tracking a slow recovery over weeks. A clean, low, stable resistance reading here means the glove's channel can be trusted; a high or jumpy one means an electrode needs repositioning, a quick skin wipe-down, or a firmer and more even fit before any other test runs.</p>
+      <span class="pill">Contact</span>
+        <h2>Every test starts<br><span class="muted-line">with contact quality</span></h2>
+      <p>Every other reading rides on it. If contact is loose or uneven, changes from a shifting glove can look exactly like changes in the underlying signal — which is the one thing you can't afford when the whole point is tracking a slow recovery over weeks. A clean, low, stable resistance reading here means the glove's channel can be trusted; a high or jumpy one means an electrode needs repositioning, a quick skin wipe-down, or a firmer and more even fit before any other test runs.</p>
     </div>
     <div class="how-grid">
       <div class="how-diagram">
@@ -647,6 +680,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261003-3"></script>
+<script src="shared.js?v=20261003-5"></script>
 </body>
 </html>

@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03a contact fault detail";
+const char FIRMWARE_VERSION[] = "2026-10-03b calibration agreement";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -229,6 +229,13 @@ const float GOOD_CONTACT_MULTIPLE = 1.5;
 
 // Sanity bounds for a baseline arriving over serial, so a typo or a garbled line can't
 // silently install a nonsense reference that makes every later test meaningless.
+// Ten samples that disagree by more than this much are noise, not a measurement. Good
+// contact in the glove repeats to about 1%; a baseline taken near open circuit sprayed
+// 70% because Z = R*f/(1-f) turns one ADC count into tens of kilohms up there. The mean
+// of that is a number with no measurement behind it, and storing it as a reference makes
+// every later verdict meaningless.
+const float CALIB_MAX_SPREAD_FRAC = 0.25;
+
 const float MIN_PLAUSIBLE_BASELINE = 1000.0;        // 1 kilohm
 const float MAX_PLAUSIBLE_BASELINE = 20000000.0;    // 20 megohm
 
@@ -568,6 +575,8 @@ void runCalibration() {
   contactCircuitOn();
 
   float sum = 0;
+  float minOhms = 0;
+  float maxOhms = 0;
   int validSamples = 0;
 
   for (int i = 0; i < CALIB_SAMPLE_COUNT; i++) {
@@ -575,6 +584,13 @@ void runCalibration() {
     bool measurable = measureContactImpedance(impedance);
     if (measurable) {
       sum += impedance;
+      if (validSamples == 0) {
+        minOhms = impedance;
+        maxOhms = impedance;
+      } else {
+        if (impedance < minOhms) minOhms = impedance;
+        if (impedance > maxOhms) maxOhms = impedance;
+      }
       validSamples++;
     }
     Serial.print("Calibration sample ");
@@ -610,6 +626,24 @@ void runCalibration() {
   // on the next boot for being implausible -- calibration appearing to succeed and then
   // vanishing is far more confusing than it failing here and saying so.
   float measured = sum / validSamples;
+
+  // Agreement, not just validity. Every sample can be in range and the set still mean
+  // nothing if they do not land near each other.
+  float spread = (maxOhms - minOhms) / measured;
+  Serial.print(F("Spread: "));
+  Serial.print(spread * 100.0, 1);
+  Serial.print(F("% ("));
+  Serial.print(minOhms, 0);
+  Serial.print(F(" to "));
+  Serial.print(maxOhms, 0);
+  Serial.println(F(" ohms)"));
+  if (spread > CALIB_MAX_SPREAD_FRAC) {
+    Serial.println(F("Readings will not settle, so the mean is not a measurement."));
+    Serial.println(F("Press the electrodes firmly and calibrate again."));
+    Serial.println("CALIBRATION_RESULT:failed");
+    return;
+  }
+
   if (measured < MIN_PLAUSIBLE_BASELINE || measured > MAX_PLAUSIBLE_BASELINE) {
     Serial.print("Measured ");
     Serial.print(measured, 0);

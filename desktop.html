@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261003-7">
+<link rel="stylesheet" href="shared.css?v=20261003-8">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -64,54 +64,136 @@
 <main class="wrap">
 
 <div class="page page-active" data-page="home" id="page-home">
-  <section class="inst">
-    <div class="inst-panel" id="heroScope">
-      <svg class="inst-trace" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true">
-        <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,190 90,190 110,112 128,254 148,190 300,190 318,90 338,268 356,190 520,190 540,142 558,236 576,190 760,190 780,56 800,284 820,190 1000,190 1020,132 1038,248 1056,190 1200,190"/>
-      </svg>
-      <div class="inst-top">
-        <span class="inst-state"><span class="status-dot" id="panelStatusDot"></span><span id="panelStatusText">Not connected</span></span>
-        <span class="inst-stamp" id="scopeClock">SAMPLE</span>
+  <!-- 1. HERO -->
+  <section class="ec-hero" id="heroScope">
+    <svg class="ec-hero-trace" viewBox="0 0 1200 420" preserveAspectRatio="none" aria-hidden="true">
+      <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,260 90,260 110,170 128,350 148,260 300,260 318,140 338,370 356,260 520,260 540,205 558,320 576,260 760,260 780,100 800,390 820,260 1000,260 1020,190 1038,340 1056,260 1200,260"/>
+    </svg>
+    <div class="ec-hero-body">
+      <span class="pill pill-on-dark">Nerve recovery, measured</span>
+      <h1>Progress You Can<br>See, Not Just Feel.</h1>
+      <p>A compression glove that reads the nerve, not the guesswork.</p>
+      <button class="btn btn-pill" id="heroConnectBtn">Connect the board <span class="btn-arrow">&rarr;</span></button>
+    </div>
+    <div class="ec-hero-card">
+      <div class="ec-hero-card-read">
+        <span id="scopeValueNum">—</span><small id="scopeValueUnit"></small>
       </div>
-      <div class="inst-read">
-        <span class="inst-num" id="scopeValueNum">128</span>
-        <span class="inst-unit" id="scopeValueUnit">kΩ</span>
-      </div>
-      <div class="inst-foot">
-        <div class="inst-chip"><span>Contact</span><b id="scopeContact">Good</b></div>
-        <div class="inst-chip"><span>Signal</span><b id="scopeVoltage">1.62 V</b></div>
-        <div class="inst-chip"><span>Baseline</span><b id="scopeBaseline">Set</b></div>
-        <button class="btn btn-pill inst-connect" id="heroConnectBtn">Connect <span class="btn-arrow">&rarr;</span></button>
+      <div class="ec-hero-card-meta">
+        <span class="status-dot" id="panelStatusDot"></span>
+        <span id="panelStatusText">Not connected</span>
       </div>
     </div>
   </section>
 
-  <section class="jump">
-    <a class="jump-tile jump-wide" href="#test-menu" data-nav="test-menu">
-      <span class="jump-k">01</span>
-      <b>Contact check</b>
-      <span class="jump-s">Verify the electrodes</span>
-    </a>
-    <a class="jump-tile jump-wide" href="#test-menu" data-nav="test-menu">
-      <span class="jump-k">02</span>
-      <b>Calibrate</b>
-      <span class="jump-s">Set your baseline</span>
-    </a>
-    <a class="jump-tile jump-dark" href="#test-menu" data-nav="test-menu">
-      <span class="jump-k">03</span>
-      <b>EMG</b>
-      <span class="jump-s">Watch the muscle fire</span>
-    </a>
-    <a class="jump-tile jump-accent" href="#test-menu" data-nav="test-menu">
-      <span class="jump-k">04</span>
-      <b>Flex</b>
-      <span class="jump-s">Bend angle, live</span>
-    </a>
-    <a class="jump-tile" href="#data" data-nav="data">
-      <span class="jump-k">05</span>
-      <b>Sessions</b>
-      <span class="jump-s">Your history over time</span>
-    </a>
+  <!-- 2. STRIP -->
+  <section class="ec-strip">
+    <span>Arduino</span><span>Web Serial</span><span>Firebase</span><span>Firestore</span><span>EMG</span>
+  </section>
+
+  <!-- 3. FEATURES -->
+  <section class="ec-sec">
+    <div class="ec-head ec-head-right">
+      <span class="pill">Features</span>
+      <h2>Three Signals,<br><span class="muted-line">One Recovery Picture</span></h2>
+    </div>
+    <div class="ec-feature-grid">
+      <div class="ec-card ec-card-light">
+        <h3>AC Contact Check</h3>
+        <p>Reads dry electrodes where DC cannot.</p>
+        <div class="ec-stat">500<span>Hz</span></div>
+      </div>
+      <div class="ec-card ec-card-trace">
+        <svg viewBox="0 0 320 200" preserveAspectRatio="none" aria-hidden="true">
+          <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,130 40,130 54,70 68,186 82,130 150,130 164,52 178,196 192,130 260,130 274,86 288,172 302,130 320,130"/>
+        </svg>
+        <span class="pill pill-sm pill-on-dark">EMG</span>
+        <h3>Muscle Activation</h3>
+      </div>
+      <div class="ec-card ec-card-dark">
+        <h3>Repeatability</h3>
+        <p>Glove on, glove off, three times over.</p>
+        <div class="ec-stat">1<span>%</span></div>
+        <svg class="ec-bars" viewBox="0 0 180 60" aria-hidden="true">
+          <rect x="0" y="16" width="26" height="44" rx="4"/><rect x="38" y="8" width="26" height="52" rx="4"/>
+          <rect x="76" y="14" width="26" height="46" rx="4"/><rect x="114" y="4" width="26" height="56" rx="4"/>
+          <rect x="152" y="12" width="26" height="48" rx="4"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. SERVICES -->
+  <section class="ec-sec ec-split">
+    <div class="ec-split-left">
+      <span class="pill">Tests</span>
+      <h2>What The Glove<br><span class="muted-line">Actually Measures</span></h2>
+      <a class="btn btn-pill" href="#test-menu" data-nav="test-menu">Open the test menu <span class="btn-arrow">&rarr;</span></a>
+    </div>
+    <div class="ec-list">
+      <a class="ec-row" href="#test-menu" data-nav="test-menu"><b>Contact check</b><span>Verifies electrode-to-skin contact before anything else.</span><i>&rarr;</i></a>
+      <a class="ec-row" href="#test-menu" data-nav="test-menu"><b>Calibration</b><span>Captures your own best-contact baseline.</span><i>&rarr;</i></a>
+      <a class="ec-row" href="#test-menu" data-nav="test-menu"><b>EMG</b><span>Reads the muscle firing as it works.</span><i>&rarr;</i></a>
+      <a class="ec-row" href="#test-menu" data-nav="test-menu"><b>Flex</b><span>Bend angle across the finger, live.</span><i>&rarr;</i></a>
+      <a class="ec-row" href="#data" data-nav="data"><b>Sessions</b><span>Every run logged and plotted over time.</span><i>&rarr;</i></a>
+    </div>
+  </section>
+
+  <!-- 5. SHOWCASE -->
+  <section class="ec-show">
+    <span class="pill pill-on-dark">Live</span>
+    <h2>Every Test Starts<br>With Contact Quality</h2>
+    <p>Loose contact and a stalled nerve look identical. One of them is fixable in seconds.</p>
+  </section>
+
+  <!-- 6. WHY -->
+  <section class="ec-sec">
+    <div class="ec-head ec-head-center">
+      <span class="pill">Why</span>
+      <h2>Measured, Not Guessed</h2>
+    </div>
+    <div class="ec-why">
+      <div class="ec-card ec-card-light"><h3>Dry electrodes</h3><p>No gel, no single-use pads.</p></div>
+      <div class="ec-card ec-card-mid"><div class="ec-stat">103<span>kΩ</span></div><p>Typical dry contact, measured.</p></div>
+      <div class="ec-card ec-card-light"><h3>Personal baseline</h3><p>Judged against you, not a fixed number.</p></div>
+      <div class="ec-card ec-card-light"><h3>Runs in the browser</h3><p>No install, nothing leaves the tab.</p></div>
+      <div class="ec-card ec-card-light"><h3>Session history</h3><p>Trend over weeks, not one reading.</p></div>
+    </div>
+  </section>
+
+  <!-- 7. HOW IT WORKS -->
+  <section class="ec-sec">
+    <div class="ec-head ec-head-center">
+      <span class="pill">How it works</span>
+      <h2>Four Steps,<br><span class="muted-line">Start To Reading</span></h2>
+    </div>
+    <div class="ec-steps">
+      <div class="ec-step"><div class="ec-step-art"></div><b>01 — Put it on</b><span>Electrodes seated, glove pulled over.</span></div>
+      <div class="ec-step"><div class="ec-step-art"></div><b>02 — Calibrate</b><span>Capture your own contact baseline.</span></div>
+      <div class="ec-step"><div class="ec-step-art"></div><b>03 — Run a test</b><span>Contact, EMG or flex, live in the browser.</span></div>
+      <div class="ec-step"><div class="ec-step-art"></div><b>04 — Track it</b><span>Every session logged against the last.</span></div>
+    </div>
+  </section>
+
+  <!-- 8. FAQ -->
+  <section class="ec-sec">
+    <div class="ec-head ec-head-center">
+      <span class="pill">FAQ</span>
+      <h2>Before You Start</h2>
+    </div>
+    <div class="ec-faq">
+      <details><summary>Why does contact have to be checked first?</summary><p>Every other reading rides on it. Loose contact produces the same result as no recovery.</p></details>
+      <details><summary>Why dry electrodes instead of gel?</summary><p>Gel works better but is single-use. A glove you wear daily cannot depend on it.</p></details>
+      <details><summary>Does it work on a phone?</summary><p>Not yet. The browser feature that talks to the board only exists on desktop Chrome and Edge.</p></details>
+      <details><summary>Where does my data go?</summary><p>To your account, or nowhere at all if you are not signed in.</p></details>
+    </div>
+  </section>
+
+  <!-- 9. CTA + FOOTER -->
+  <section class="ec-cta">
+    <h2>Ready To See<br>What It Reads?</h2>
+    <a class="btn btn-pill" href="#test-menu" data-nav="test-menu">Open the test menu <span class="btn-arrow">&rarr;</span></a>
+    <span class="ec-ghost">NEUROVA</span>
   </section>
 
 </div><!-- /page-home -->
@@ -485,6 +567,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261003-7"></script>
+<script src="shared.js?v=20261003-8"></script>
 </body>
 </html>

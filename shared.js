@@ -196,25 +196,6 @@ window.Neurova = window.Neurova || {};
       tiles.forEach(t => io.observe(t));
     }
 
-    // Count the reading up once on arrival. Only for the placeholder: a real
-    // measurement should appear as itself rather than be animated towards.
-    const num = document.getElementById('scopeValueNum');
-    const panel = document.getElementById('heroScope');
-    if(num && panel && panel.classList.contains('is-sample') && !reduced){
-      const target = parseInt(num.textContent, 10);
-      if(!isNaN(target)){
-        const start = performance.now();
-        const dur = 900;
-        const step = now => {
-          const p = Math.min(1, (now - start) / dur);
-          // ease-out, so it decelerates into the value the way a gauge settles
-          num.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
-          if(p < 1) requestAnimationFrame(step);
-        };
-        num.textContent = '0';
-        requestAnimationFrame(step);
-      }
-    }
   })();
 
   // ---------------- clock ----------------
@@ -258,23 +239,23 @@ window.Neurova = window.Neurova || {};
   function setScopeSampleMode(isSample){
     const scopeEl = document.getElementById('heroScope');
     if(scopeEl) scopeEl.classList.toggle('is-sample', isSample);
+    // No invented readings. Disconnected, the panel shows that it has nothing to show,
+    // which is information; a plausible-looking number is not.
     if(isSample){
-      setScopeText('scopeValueNum', '128');
-      setScopeText('scopeValueUnit', 'kΩ');
-      setScopeText('scopeContact', 'Good');
-      setScopeText('scopeVoltage', '1.62 V');
-      setScopeText('scopeBaseline', 'Set');
-    } else {
-      // Connected but nothing measured yet: dashes rather than last session's sample.
       setScopeText('scopeValueNum', '—');
-      setScopeText('scopeValueUnit', '—');
+      setScopeText('scopeValueUnit', '');
       setScopeText('scopeContact', '—');
       setScopeText('scopeVoltage', '—');
-      // Deliberately not reading boardBaseline here: it is declared further down the file
-      // and this runs during setup, so referencing it would depend on call ordering.
+      setScopeText('scopeBaseline', '—');
+    } else {
+      setScopeText('scopeValueNum', '—');
+      setScopeText('scopeValueUnit', '');
+      setScopeText('scopeContact', '—');
+      setScopeText('scopeVoltage', '—');
       setScopeText('scopeBaseline', '—');
     }
   }
+
   function setScopeText(id, text){
     const el = document.getElementById(id);
     if(el) el.textContent = text;

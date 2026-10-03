@@ -1497,3 +1497,145 @@
     .inst-panel::after{ animation:none; display:none; }
     .reveal{ opacity:1; transform:none; }
   }
+
+  /* ==================================================================
+     Ecoriz layout, section for section.
+     Where that template uses photography this uses the instrument -- the
+     trace, the readings, dark panels -- because there are no product
+     photos and inventing numbers to fill a card is exactly what we just
+     took out.
+     ================================================================== */
+
+  .ec-sec{ padding:0 0 110px; }
+  .ec-head{ margin-bottom:44px; }
+  .ec-head h2{ font-size:46px; line-height:1.08; letter-spacing:-0.035em; margin:0; }
+  .ec-head-center{ text-align:center; }
+  .ec-head-center .pill{ margin-inline:auto; display:block; width:max-content; }
+  .ec-head-right{ display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
+
+  /* 1. hero -------------------------------------------------------- */
+  .ec-hero{
+    position:relative; overflow:hidden; isolation:isolate;
+    background:#0f1f1b; border-radius:30px;
+    margin:26px 0 0; padding:92px 60px 104px; min-height:520px;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .ec-hero-trace{ position:absolute; inset:auto 0 0 0; width:100%; height:66%; color:rgba(95,191,143,0.20); z-index:-1; }
+  .ec-hero-trace polyline{ stroke-dasharray:3000; stroke-dashoffset:3000; animation:traceDraw 8s cubic-bezier(.4,0,.2,1) infinite; }
+  .ec-hero-body{ max-width:760px; }
+  .ec-hero h1{ font-size:74px; line-height:1.03; letter-spacing:-0.04em; color:#f3faf7; margin:0; }
+  .ec-hero p{ font-size:18px; color:rgba(220,238,231,0.7); margin:20px 0 32px; max-width:46ch; }
+
+  .ec-hero-card{
+    position:absolute; right:52px; bottom:52px;
+    background:rgba(255,255,255,0.10); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,0.18); border-radius:22px;
+    padding:22px 28px; min-width:220px;
+  }
+  .ec-hero-card-read{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:52px; line-height:1; color:#f3faf7; letter-spacing:-0.03em; }
+  .ec-hero-card-read small{ font-size:19px; color:rgba(220,238,231,0.55); margin-left:6px; }
+  .ec-hero-card-meta{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:rgba(220,238,231,0.7); }
+
+  /* 2. strip ------------------------------------------------------- */
+  .ec-strip{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:40px 20px 96px; flex-wrap:wrap; gap:22px;
+  }
+  .ec-strip span{
+    font-family:'IBM Plex Mono',monospace; font-size:13px;
+    letter-spacing:0.12em; text-transform:uppercase; color:var(--line-strong);
+  }
+
+  /* 3. features ---------------------------------------------------- */
+  .ec-feature-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
+  .ec-card{ border-radius:24px; padding:30px; display:flex; flex-direction:column; min-height:300px; position:relative; overflow:hidden; }
+  .ec-card h3{ font-size:21px; margin:0; letter-spacing:-0.02em; }
+  .ec-card p{ font-size:14.5px; line-height:1.5; margin:10px 0 0; }
+  .ec-stat{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:62px; line-height:1; letter-spacing:-0.04em; margin-top:auto; }
+  .ec-stat span{ font-size:22px; opacity:0.55; margin-left:4px; }
+  .ec-card-light{ background:var(--panel); border:1px solid var(--line); }
+  .ec-card-light p{ color:var(--muted); }
+  .ec-card-dark{ background:#0f1f1b; color:#f3faf7; }
+  .ec-card-dark p{ color:rgba(220,238,231,0.68); }
+  .ec-card-mid{ background:var(--primary); color:var(--primary-ink); justify-content:flex-end; }
+  .ec-card-mid p{ color:rgba(244,246,244,0.82); }
+  .ec-bars{ width:100%; height:60px; margin-top:22px; fill:rgba(95,191,143,0.5); }
+  .ec-card-trace{ background:#13302a; color:#f3faf7; justify-content:flex-end; }
+  .ec-card-trace svg{ position:absolute; inset:0 0 auto 0; width:100%; height:58%; color:rgba(95,191,143,0.4); }
+  .ec-card-trace .pill{ align-self:flex-start; }
+
+  /* 4. services ---------------------------------------------------- */
+  .ec-split{ display:grid; grid-template-columns:0.9fr 1.1fr; gap:64px; align-items:start; }
+  .ec-split-left h2{ font-size:46px; line-height:1.08; letter-spacing:-0.035em; margin:0 0 28px; }
+  .ec-row{
+    display:grid; grid-template-columns:200px 1fr 28px; align-items:center; gap:18px;
+    padding:24px 4px; border-top:1px solid var(--line); text-decoration:none; color:inherit;
+    transition:padding-left .2s ease;
+  }
+  .ec-row:last-child{ border-bottom:1px solid var(--line); }
+  .ec-row:hover{ padding-left:12px; }
+  .ec-row b{ font-size:17px; font-weight:600; }
+  .ec-row span{ font-size:14.5px; color:var(--muted); }
+  .ec-row i{ font-style:normal; color:var(--muted); justify-self:end; }
+
+  /* 5. showcase ---------------------------------------------------- */
+  .ec-show{
+    background:var(--primary); color:var(--primary-ink);
+    border-radius:30px; padding:92px 60px; margin:0 0 110px; text-align:center;
+  }
+  .ec-show h2{ font-size:52px; line-height:1.06; letter-spacing:-0.035em; margin:0; }
+  .ec-show p{ font-size:17px; color:rgba(244,246,244,0.82); margin:18px auto 0; max-width:52ch; }
+
+  /* 6. why grid ---------------------------------------------------- */
+  .ec-why{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .ec-why .ec-card{ min-height:200px; }
+  .ec-why .ec-card-mid{ grid-row:span 2; min-height:0; }
+
+  /* 7. steps ------------------------------------------------------- */
+  .ec-steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .ec-step b{ display:block; font-size:16px; margin:16px 0 6px; letter-spacing:-0.01em; }
+  .ec-step span{ font-size:14px; color:var(--muted); line-height:1.5; }
+  .ec-step-art{
+    height:190px; border-radius:20px;
+    background:linear-gradient(150deg, #13302a, #0f1f1b 70%);
+    position:relative; overflow:hidden;
+  }
+  .ec-step-art::after{
+    content:''; position:absolute; inset:auto 0 32% 0; height:1px;
+    background:rgba(95,191,143,0.35);
+  }
+
+  /* 8. faq --------------------------------------------------------- */
+  .ec-faq{ max-width:780px; margin:0 auto; }
+  .ec-faq details{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:20px 24px; margin-bottom:12px;
+  }
+  .ec-faq summary{ font-size:16px; font-weight:600; cursor:pointer; list-style:none; }
+  .ec-faq summary::-webkit-details-marker{ display:none; }
+  .ec-faq summary::after{ content:'+'; float:right; color:var(--muted); font-weight:400; }
+  .ec-faq details[open] summary::after{ content:'–'; }
+  .ec-faq p{ font-size:14.5px; color:var(--muted); line-height:1.6; margin:14px 0 0; }
+
+  /* 9. cta + ghost wordmark ---------------------------------------- */
+  .ec-cta{
+    background:#0f1f1b; border-radius:30px; padding:96px 60px 0;
+    text-align:center; overflow:hidden; margin-bottom:28px;
+  }
+  .ec-cta h2{ font-size:56px; line-height:1.05; letter-spacing:-0.04em; color:#f3faf7; margin:0 0 32px; }
+  .ec-ghost{
+    display:block; margin-top:64px;
+    font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:clamp(90px,16vw,210px); line-height:0.8; letter-spacing:-0.05em;
+    color:rgba(255,255,255,0.055); user-select:none;
+  }
+
+  @media (max-width: 1000px){
+    .ec-feature-grid, .ec-why, .ec-steps{ grid-template-columns:1fr; }
+    .ec-split{ grid-template-columns:1fr; gap:36px; }
+    .ec-hero{ padding:64px 28px 80px; }
+    .ec-hero h1{ font-size:44px; }
+    .ec-hero-card{ position:static; margin-top:32px; }
+    .ec-row{ grid-template-columns:1fr 24px; }
+    .ec-row span{ grid-column:1 / -1; }
+  }

@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03d flash strings";
+const char FIRMWARE_VERSION[] = "2026-10-03e contact stream";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -1042,6 +1042,16 @@ float readFlexRaw(){
 float flexFlatRaw = 0, flexBentRaw = 0;
 bool flexCalibrated = false;
 bool flexStreaming = false;
+
+// Live contact readout. Seating an electrode is a mechanical problem, and poking it with
+// a one-shot command hides exactly the thing worth seeing: whether a number is steady or
+// jumping. Running min and max come along so a dropout between two prints is not missed.
+bool contactStreaming = false;
+unsigned long lastContactStreamSampleTime = 0;
+const unsigned long CONTACT_STREAM_INTERVAL_MS = 250;
+float contactStreamMin = 0;
+float contactStreamMax = 0;
+bool contactStreamSeen = false;
 unsigned long lastFlexStreamSampleTime = 0;
 const unsigned long FLEX_STREAM_INTERVAL_MS = 60;
 
@@ -1241,6 +1251,7 @@ void printMenu() {
   Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | MENU"));
   Serial.println(F("  CHECK | CHECK:SAVE | RAIL | FLEX | FLEXCAL:FLAT | FLEXCAL:BENT"));
   Serial.println(F("  FLEX_STREAM_START | FLEX_STREAM_STOP"));
+  Serial.println(F("  CONTACT_STREAM_START | CONTACT_STREAM_STOP"));
 }
 
 // Turns a bare digit into the command it stands for, leaving anything else untouched.
@@ -1310,6 +1321,16 @@ void loop() {
     } else if (input == "FLEX_STREAM_STOP") {
       flexStreaming = false;
       Serial.println(F("FLEX_STREAM:stopped"));
+    } else if (input == "CONTACT_STREAM_START") {
+      contactStreaming = true;
+      contactStreamSeen = false;
+      lastContactStreamSampleTime = millis();
+      moduleSwitch(false);
+      Serial.println(F("CONTACT_STREAM:started"));
+    } else if (input == "CONTACT_STREAM_STOP") {
+      contactStreaming = false;
+      contactCircuitOff();
+      Serial.println(F("CONTACT_STREAM:stopped"));
     } else if (input == "AC") {
       runAcTest(5);
     } else if (input.startsWith("AC:")) {
@@ -1348,7 +1369,38 @@ void loop() {
     } else {
       handled = false;
     }
-    if (handled) moduleSwitch(true);
+    // Reconnecting the module would short the junction at AC, so a live contact stream
+    // keeps it cut off until the stream is stopped.
+    if (handled && !contactStreaming) moduleSwitch(true);
+  }
+
+  if (contactStreaming) {
+    unsigned long now = millis();
+    if (now - lastContactStreamSampleTime >= CONTACT_STREAM_INTERVAL_MS) {
+      lastContactStreamSampleTime = now;
+      float amp = readAcAmplitude(CONTACT_AC_HALF_MS, 8);
+      float fraction = amp / ADC_MAX_COUNTS;
+      float ohms = -1;
+      if (fraction > 0.001 && fraction < 0.999) {
+        ohms = FIXED_RESISTOR * fraction / (1.0 - fraction);
+        if (!contactStreamSeen) {
+          contactStreamMin = ohms;
+          contactStreamMax = ohms;
+          contactStreamSeen = true;
+        } else {
+          if (ohms < contactStreamMin) contactStreamMin = ohms;
+          if (ohms > contactStreamMax) contactStreamMax = ohms;
+        }
+      }
+      Serial.print(F("CONTACT_LIVE:"));
+      Serial.print(amp, 1);
+      Serial.print(F(","));
+      Serial.print(ohms, 0);
+      Serial.print(F(","));
+      Serial.print(contactStreamSeen ? contactStreamMin : -1, 0);
+      Serial.print(F(","));
+      Serial.println(contactStreamSeen ? contactStreamMax : -1, 0);
+    }
   }
 
   if (flexStreaming) {

@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03b calibration agreement";
+const char FIRMWARE_VERSION[] = "2026-10-03c settling vs scatter";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -235,6 +235,13 @@ const float GOOD_CONTACT_MULTIPLE = 1.5;
 // of that is a number with no measurement behind it, and storing it as a reference makes
 // every later verdict meaningless.
 const float CALIB_MAX_SPREAD_FRAC = 0.25;
+
+// A baseline is the good-contact reference every later verdict is measured against, so
+// storing a poor-contact value does not just make one reading wrong -- it raises the pass
+// mark to meet it. A 1.4M baseline sets the threshold at 2.1M, and electrodes hanging in
+// free air measure 2.6M, so nearly anything would pass. Measured good contact in the
+// glove is 38k, hard finger pressure 64k, and dry electrodes at 500 Hz top out near 267k.
+const float MAX_GOOD_CONTACT_BASELINE = 400000.0;
 
 const float MIN_PLAUSIBLE_BASELINE = 1000.0;        // 1 kilohm
 const float MAX_PLAUSIBLE_BASELINE = 20000000.0;    // 20 megohm
@@ -577,6 +584,9 @@ void runCalibration() {
   float sum = 0;
   float minOhms = 0;
   float maxOhms = 0;
+  float prevOhms = 0;
+  int descents = 0;
+  int steps = 0;
   int validSamples = 0;
 
   for (int i = 0; i < CALIB_SAMPLE_COUNT; i++) {
@@ -584,6 +594,11 @@ void runCalibration() {
     bool measurable = measureContactImpedance(impedance);
     if (measurable) {
       sum += impedance;
+      if (validSamples > 0) {
+        steps++;
+        if (impedance < prevOhms) descents++;
+      }
+      prevOhms = impedance;
       if (validSamples == 0) {
         minOhms = impedance;
         maxOhms = impedance;
@@ -636,10 +651,37 @@ void runCalibration() {
   Serial.print(minOhms, 0);
   Serial.print(F(" to "));
   Serial.print(maxOhms, 0);
-  Serial.println(F(" ohms)"));
+  Serial.print(F(" ohms, "));
+  Serial.print(descents);
+  Serial.print(F("/"));
+  Serial.print(steps);
+  Serial.println(F(" falling)"));
+  // Spread alone cannot tell drift from scatter, and they want opposite responses.
+  // Impedance falling steadily across the run is the electrode settling: trapped moisture
+  // hydrates the skin underneath it and the interface drops over minutes, so the answer
+  // is to wait. Readings jumping around instead mean the electrode is not held still.
+  bool settling = (steps > 0 && descents * 10 >= steps * 7);
   if (spread > CALIB_MAX_SPREAD_FRAC) {
-    Serial.println(F("Readings will not settle, so the mean is not a measurement."));
-    Serial.println(F("Press the electrodes firmly and calibrate again."));
+    if (settling) {
+      Serial.println(F("Impedance is still falling, so the electrodes are settling."));
+      Serial.println(F("Leave the glove on a few minutes, then calibrate again."));
+    } else {
+      Serial.println(F("Readings are scattered, so the mean is not a measurement."));
+      Serial.println(F("Press the electrodes firmly and calibrate again."));
+    }
+    Serial.println("CALIBRATION_RESULT:failed");
+    return;
+  }
+
+  if (measured > MAX_GOOD_CONTACT_BASELINE) {
+    Serial.print(F("Measured "));
+    Serial.print(measured, 0);
+    Serial.println(F(" ohms, too high to be the good-contact reference."));
+    if (settling) {
+      Serial.println(F("Still falling. Leave the glove on a few minutes, then try again."));
+    } else {
+      Serial.println(F("Reseat the electrodes against bare skin."));
+    }
     Serial.println("CALIBRATION_RESULT:failed");
     return;
   }

@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261003-1">
+<link rel="stylesheet" href="shared.css?v=20261003-2">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -77,21 +77,21 @@
           <a href="#test-menu" data-nav="test-menu" class="btn btn-ghost">Open the test menu</a>
         </div>
       </div>
-      <div class="scope">
+      <div class="scope is-sample" id="heroScope">
         <div class="scope-head">
           <span class="scope-label"><span class="product-name">REACH</span>: STATUS</span>
-          <span class="scope-label" id="scopeClock">00:00:00</span>
+          <span class="scope-label" id="scopeClock">SAMPLE</span>
         </div>
-        <div class="scope-value">128<span>kΩ · nominal</span></div>
+        <div class="scope-value"><span id="scopeValueNum">128</span><span id="scopeValueUnit">kΩ · nominal</span></div>
         <svg class="scope-wave" viewBox="0 0 400 80" preserveAspectRatio="none">
           <polyline points="0,50 20,50 30,20 40,65 50,50 90,50 100,35 110,55 120,50 200,50 210,25 220,60 230,50 400,50"
             fill="none" stroke="#5fbf8f" stroke-width="1.6"/>
         </svg>
         <div class="scope-sweep"></div>
         <div class="scope-foot">
-          <div class="scope-stat">CONTACT<b>Good</b></div>
-          <div class="scope-stat">VOLTAGE<b>1.62 V</b></div>
-          <div class="scope-stat">BASELINE<b>Set</b></div>
+          <div class="scope-stat">CONTACT<b id="scopeContact">Good</b></div>
+          <div class="scope-stat">VOLTAGE<b id="scopeVoltage">1.62 V</b></div>
+          <div class="scope-stat">BASELINE<b id="scopeBaseline">Set</b></div>
         </div>
       </div>
     </div>
@@ -642,6 +642,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261003-1"></script>
+<script src="shared.js?v=20261003-2"></script>
 </body>
 </html>

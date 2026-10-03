@@ -64,9 +64,12 @@
 
   /* ---------- hero ---------- */
   .hero{padding:64px 0 40px;}
-  .hero-grid{display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center;}
+  /* The text column was narrow enough that a 44px headline wrapped to five lines, which
+     reads as cramped rather than emphatic. Widening the column and relaxing the measure
+     from 15ch lets it break in three. */
+  .hero-grid{display:grid; grid-template-columns:1.25fr 0.9fr; gap:48px; align-items:center;}
   .eyebrow{font-size:13px; color:var(--muted); margin-bottom:14px;}
-  .hero h1{font-size:44px; line-height:1.08; max-width:15ch;}
+  .hero h1{font-size:42px; line-height:1.1; max-width:21ch;}
   .hero p.lede{margin-top:18px; max-width:44ch; color:var(--muted); font-size:16px;}
   .hero-actions{display:flex; gap:12px; margin-top:28px;}
   .btn{
@@ -102,6 +105,13 @@
   .scope-head{display:flex; justify-content:space-between; align-items:baseline; position:relative;}
   .scope-label{font-family:'IBM Plex Mono', monospace; font-size:11px; color:#7fa89c; letter-spacing:0.04em;}
   .scope-value{font-family:'IBM Plex Mono', monospace; font-size:46px; color:#eaf6f1; margin-top:14px; position:relative;}
+  /* Until a board is attached these are invented numbers, and they were presented exactly
+     as a live reading would be. Muting them and labelling the panel SAMPLE keeps the
+     visual without implying the device is reporting something. */
+  .scope.is-sample .scope-value,
+  .scope.is-sample .scope-stat b{ color:#7fa89c; }
+  .scope.is-sample .scope-wave{ opacity:0.45; }
+  .scope.is-sample .scope-sweep{ display:none; }
   .scope-value span{font-size:16px; color:#7fa89c; margin-left:6px;}
   .scope-wave{width:100%; height:80px; margin-top:14px; position:relative;}
   .scope-sweep{
@@ -352,7 +362,14 @@
   .test-featured .icon-wrap svg{width:32px; height:32px;}
   .test-featured h3{font-size:22px; margin:2px 0 0;}
   .test-featured p{color:var(--muted); font-size:14.5px; margin:0; max-width:48ch; line-height:1.55;}
-  .test-featured-body{transition:opacity 0.22s ease; opacity:1; display:flex; flex-direction:column; gap:14px;}
+  /* The featured card is stretched to match the height of the four cards beside it, and
+     its content does not fill that. Letting the body grow and centre distributes the slack
+     above and below rather than leaving a blank third beneath the text. */
+  .test-featured-body{
+    transition:opacity 0.22s ease; opacity:1;
+    display:flex; flex-direction:column; gap:14px;
+    flex:1; justify-content:center;
+  }
   .test-featured-body.fading{opacity:0;}
   .roadmap-dots{display:flex; gap:8px; margin-top:auto; padding-top:18px;}
   .roadmap-dot{
@@ -370,6 +387,9 @@
     text-align:left; font:inherit; color:inherit; width:100%;
   }
   .test-card:hover{border-color:var(--primary);}
+  /* Descriptions vary in length, so without this the trailing space lands differently in
+     each card and the grid reads as ragged even though the boxes are the same height. */
+  .test-card p{flex:1; margin:0;}
   .test-card.fading{opacity:0;}
   .test-card .icon-wrap{
     width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center;

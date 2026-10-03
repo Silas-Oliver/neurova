@@ -176,7 +176,13 @@ window.Neurova = window.Neurova || {};
 
   // ---------------- clock ----------------
   function tickClock(){
-    document.getElementById('scopeClock').textContent = new Date().toLocaleTimeString('en-GB');
+    const clockEl = document.getElementById('scopeClock');
+    const scopeEl = document.getElementById('heroScope');
+    // A running clock on a panel full of invented numbers reads as a live instrument.
+    // While it is a sample it says so, and only starts ticking once a board is attached.
+    if(clockEl) clockEl.textContent = (scopeEl && scopeEl.classList.contains('is-sample'))
+      ? 'SAMPLE'
+      : new Date().toLocaleTimeString('en-GB');
   }
   tickClock();
   setInterval(tickClock, 1000);
@@ -203,7 +209,36 @@ window.Neurova = window.Neurova || {};
   const panelConnectBtn = document.getElementById('panelConnectBtn');
   const baudSelect = document.getElementById('baudSelect');
 
+  // The hero panel shows placeholder readings until a board is attached. Connecting clears
+  // the sample marking and hands it over to real values, so it stops being decoration and
+  // becomes an actual readout.
+  function setScopeSampleMode(isSample){
+    const scopeEl = document.getElementById('heroScope');
+    if(scopeEl) scopeEl.classList.toggle('is-sample', isSample);
+    if(isSample){
+      setScopeText('scopeValueNum', '128');
+      setScopeText('scopeValueUnit', 'kΩ · nominal');
+      setScopeText('scopeContact', 'Good');
+      setScopeText('scopeVoltage', '1.62 V');
+      setScopeText('scopeBaseline', 'Set');
+    } else {
+      // Connected but nothing measured yet: dashes rather than last session's sample.
+      setScopeText('scopeValueNum', '—');
+      setScopeText('scopeValueUnit', 'awaiting a reading');
+      setScopeText('scopeContact', '—');
+      setScopeText('scopeVoltage', '—');
+      // Deliberately not reading boardBaseline here: it is declared further down the file
+      // and this runs during setup, so referencing it would depend on call ordering.
+      setScopeText('scopeBaseline', '—');
+    }
+  }
+  function setScopeText(id, text){
+    const el = document.getElementById(id);
+    if(el) el.textContent = text;
+  }
+
   function setConnectedUI(connected){
+    setScopeSampleMode(!connected);
     [topStatusDot, panelStatusDot].forEach(d => d.classList.toggle('on', connected));
     topStatusText.textContent = connected ? 'Board connected' : 'No device connected';
     panelStatusText.textContent = connected ? 'Connected' : 'Not connected';

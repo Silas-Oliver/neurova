@@ -198,6 +198,65 @@ window.Neurova = window.Neurova || {};
 
   })();
 
+
+  // ---------------- rotating accent band ----------------
+  //
+  // Same idea as the roadmap carousel that used to sit on this page: one claim at a time,
+  // changed on a timer, so a static band earns a second look. One panel rather than a
+  // featured-plus-four, which is what makes it readable at this size.
+  (function(){
+    const SHOW_SLIDES = [
+      { pill:'Contact',  title:'Every Test Starts<br>With Contact Quality',
+        sub:'Loose contact and a stalled nerve look identical. One of them is fixable in seconds.' },
+      { pill:'Dry',      title:'Dry Electrodes,<br>No Gel Required',
+        sub:'Measured on AC, where dry skin is readable and a steady voltage is not.' },
+      { pill:'Personal', title:'Your Baseline,<br>Not A Fixed Number',
+        sub:'Skin varies between people and across a day. Every reading is judged against your own.' },
+      { pill:'Repeat',   title:'One Percent,<br>Session To Session',
+        sub:'Glove on, glove off, three times over. The reading barely moved.' }
+    ];
+    const band = document.getElementById('ecShow');
+    const body = document.getElementById('ecShowBody');
+    const dots = document.getElementById('ecShowDots');
+    if(!band || !body || !dots) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let idx = 0, timer = null;
+
+    function paint(){
+      const s = SHOW_SLIDES[idx];
+      document.getElementById('ecShowPill').textContent = s.pill;
+      document.getElementById('ecShowTitle').innerHTML = s.title;
+      document.getElementById('ecShowSub').textContent = s.sub;
+      dots.querySelectorAll('button').forEach((d, i) => d.classList.toggle('active', i === idx));
+    }
+    function go(i){
+      if(i === idx) return;
+      idx = i;
+      if(reduced){ paint(); return; }
+      // Fade out, swap, fade back, so the text never changes under the reader's eye.
+      body.classList.add('fading');
+      setTimeout(() => { paint(); body.classList.remove('fading'); }, 220);
+      restart();
+    }
+    function restart(){
+      if(timer) clearInterval(timer);
+      if(reduced) return;
+      timer = setInterval(() => go((idx + 1) % SHOW_SLIDES.length), 10000);
+    }
+
+    dots.innerHTML = SHOW_SLIDES.map((s, i) =>
+      `<button class="ec-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="${s.pill}"></button>`).join('');
+    dots.querySelectorAll('button').forEach(d =>
+      d.addEventListener('click', () => go(parseInt(d.dataset.i, 10))));
+
+    paint();
+    restart();
+    // Stop advancing while someone is reading it.
+    band.addEventListener('mouseenter', () => { if(timer) clearInterval(timer); });
+    band.addEventListener('mouseleave', restart);
+  })();
+
   // ---------------- clock ----------------
   function tickClock(){
     const clockEl = document.getElementById('scopeClock');

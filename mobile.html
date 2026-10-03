@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261003-8">
+<link rel="stylesheet" href="shared.css?v=20261003-9">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -141,7 +141,7 @@
 
   <!-- 2. STRIP -->
   <section class="ec-strip">
-    <span>Arduino</span><span>Web Serial</span><span>Firebase</span><span>Firestore</span><span>EMG</span>
+    <span>3 sensors</span><span>No gel</span><span>No install</span><span>Runs in your browser</span><span>Your data stays yours</span>
   </section>
 
   <!-- 3. FEATURES -->
@@ -193,10 +193,13 @@
   </section>
 
   <!-- 5. SHOWCASE -->
-  <section class="ec-show">
-    <span class="pill pill-on-dark">Live</span>
-    <h2>Every Test Starts<br>With Contact Quality</h2>
-    <p>Loose contact and a stalled nerve look identical. One of them is fixable in seconds.</p>
+  <section class="ec-show" id="ecShow">
+    <span class="pill pill-on-dark" id="ecShowPill">Contact</span>
+    <div class="ec-show-body" id="ecShowBody">
+      <h2 id="ecShowTitle">Every Test Starts<br>With Contact Quality</h2>
+      <p id="ecShowSub">Loose contact and a stalled nerve look identical. One of them is fixable in seconds.</p>
+    </div>
+    <div class="ec-show-dots" id="ecShowDots"></div>
   </section>
 
   <!-- 6. WHY -->
@@ -221,10 +224,10 @@
       <h2>Four Steps,<br><span class="muted-line">Start To Reading</span></h2>
     </div>
     <div class="ec-steps">
-      <div class="ec-step"><div class="ec-step-art"></div><b>01 — Put it on</b><span>Electrodes seated, glove pulled over.</span></div>
-      <div class="ec-step"><div class="ec-step-art"></div><b>02 — Calibrate</b><span>Capture your own contact baseline.</span></div>
-      <div class="ec-step"><div class="ec-step-art"></div><b>03 — Run a test</b><span>Contact, EMG or flex, live in the browser.</span></div>
-      <div class="ec-step"><div class="ec-step-art"></div><b>04 — Track it</b><span>Every session logged against the last.</span></div>
+      <div class="ec-step"><div class="ec-step-art"><svg viewBox="0 0 120 90" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M44 72V34a6 6 0 0 1 12 0v22"/><path d="M56 56V28a6 6 0 0 1 12 0v28"/><path d="M68 56V34a6 6 0 0 1 12 0v30"/><path d="M80 64V46a6 6 0 0 1 12 0v20c0 12-9 22-24 22H60c-10 0-16-6-16-16"/><path d="M44 54 32 62"/></svg></div><b>01 — Put it on</b><span>Electrodes seated, glove pulled over.</span></div>
+      <div class="ec-step"><div class="ec-step-art"><svg viewBox="0 0 120 90" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M24 68a36 36 0 1 1 72 0"/><path d="M60 68 82 42"/><circle cx="60" cy="68" r="4" fill="currentColor" stroke="none"/><path d="M24 68h10M86 68h10M60 28v-8"/></svg></div><b>02 — Calibrate</b><span>Capture your own contact baseline.</span></div>
+      <div class="ec-step"><div class="ec-step-art"><svg viewBox="0 0 120 90" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 50h18l8-26 10 44 9-30 8 16h43"/></svg></div><b>03 — Run a test</b><span>Contact, EMG or flex, live in the browser.</span></div>
+      <div class="ec-step"><div class="ec-step-art"><svg viewBox="0 0 120 90" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 72V22M16 72h92"/><path d="M30 60l20-12 18 8 24-26"/><circle cx="30" cy="60" r="3.6" fill="currentColor" stroke="none"/><circle cx="50" cy="48" r="3.6" fill="currentColor" stroke="none"/><circle cx="68" cy="56" r="3.6" fill="currentColor" stroke="none"/><circle cx="92" cy="30" r="3.6" fill="currentColor" stroke="none"/></svg></div><b>04 — Track it</b><span>Every session logged against the last.</span></div>
     </div>
   </section>
 
@@ -643,7 +646,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261003-8"></script>
+<script src="shared.js?v=20261003-9"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

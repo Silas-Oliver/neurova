@@ -1639,3 +1639,37 @@
     .ec-row{ grid-template-columns:1fr 24px; }
     .ec-row span{ grid-column:1 / -1; }
   }
+
+  /* ---- 1. step cards: artwork instead of an empty panel ---- */
+  .ec-step-art{ display:flex; align-items:center; justify-content:center; }
+  .ec-step-art svg{ width:118px; height:auto; color:rgba(142,216,183,0.78); }
+  .ec-step-art::after{ display:none; }
+
+  /* ---- 2. why cards: sized to their content ----
+     200px minimums left a third of each card empty. The grid still aligns because
+     the row height is set by the tallest card, which is what makes a grid a grid. */
+  .ec-why .ec-card{ min-height:0; padding:26px 28px 28px; }
+  .ec-why .ec-card-light{ justify-content:flex-start; }
+  .ec-why .ec-card-mid{
+    justify-content:center; align-items:flex-start; padding:34px;
+  }
+  .ec-why .ec-card-mid .ec-stat{ margin-top:0; }
+  .ec-feature-grid .ec-card{ min-height:264px; }
+
+  /* ---- 3. rotating band ---- */
+  .ec-show-body{ transition:opacity .22s ease; opacity:1; }
+  .ec-show-body.fading{ opacity:0; }
+  .ec-show-dots{ display:flex; gap:9px; justify-content:center; margin-top:36px; }
+  .ec-dot{
+    width:8px; height:8px; border-radius:50%; padding:0; border:none; cursor:pointer;
+    background:rgba(244,246,244,0.35);
+    transition:background .2s ease, transform .2s ease;
+  }
+  .ec-dot:hover{ background:rgba(244,246,244,0.6); }
+  .ec-dot.active{ background:#f4f6f4; transform:scale(1.35); }
+
+  /* ---- 4. no underline on the pill links ---- */
+  .btn-pill, .btn-pill:hover, .btn-pill-ghost, .btn-pill-ghost:hover{ text-decoration:none; }
+
+  /* ---- 5. strip reads as specs rather than a parts list ---- */
+  .ec-strip span{ text-transform:none; letter-spacing:0.02em; font-size:13.5px; }

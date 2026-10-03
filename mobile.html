@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261003-5">
+<link rel="stylesheet" href="shared.css?v=20261003-6">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -67,7 +67,6 @@
 <main class="wrap">
 
 <div class="page page-active" data-page="home" id="page-home">
-
   <section class="ios-dash">
     <div class="product-lockup">
       <span class="lockup-company">NEUROVA</span>
@@ -118,249 +117,54 @@
     </div>
   </section>
 
-
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-panel">
-      <svg class="hero-trace" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
-        <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,200 90,200 110,120 128,268 148,200 300,200 318,96 338,284 356,200 520,200 540,150 558,250 576,200 760,200 780,60 800,300 820,200 1000,200 1020,140 1038,262 1056,200 1200,200"/>
+  <section class="inst">
+    <div class="inst-panel" id="heroScope">
+      <svg class="inst-trace" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true">
+        <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,190 90,190 110,112 128,254 148,190 300,190 318,90 338,268 356,190 520,190 540,142 558,236 576,190 760,190 780,56 800,284 820,190 1000,190 1020,132 1038,248 1056,190 1200,190"/>
       </svg>
-      <div class="hero-inner">
-        <span class="pill">Nerve recovery, measured</span>
-        <h1>Progress you can<br><span class="muted-line">see, not just feel.</span></h1>
-        <p class="lede">A compression glove that reads the nerve, not the guesswork.</p>
-        <div class="hero-actions">
-          <button class="btn btn-pill" id="heroConnectBtn">Connect the board <span class="btn-arrow">&rarr;</span></button>
-          <a href="#test-menu" data-nav="test-menu" class="btn btn-pill-ghost">See the tests</a>
-        </div>
+      <div class="inst-top">
+        <span class="inst-state"><span class="status-dot" id="panelStatusDot"></span><span id="panelStatusText">Not connected</span></span>
+        <span class="inst-stamp" id="scopeClock">SAMPLE</span>
       </div>
-      <div class="hero-float">
-        <div class="hero-float-num">38<span>kΩ</span></div>
-        <div class="hero-float-label">Dry-electrode contact,<br>repeatable to 1%</div>
+      <div class="inst-read">
+        <span class="inst-num" id="scopeValueNum">128</span>
+        <span class="inst-unit" id="scopeValueUnit">kΩ</span>
       </div>
-    </div>
-  </section>
-
-  <section class="stat-row">
-    <div class="stat-card stat-light">
-      <span class="pill pill-sm">Contact</span>
-      <div class="stat-num">500<span>Hz</span></div>
-      <p>Measured on AC, the only thing that reads dry skin.</p>
-    </div>
-    <div class="stat-card stat-dark">
-      <span class="pill pill-sm pill-on-dark">Repeatability</span>
-      <div class="stat-num">1<span>%</span></div>
-      <p>Across glove on, glove off, three times over.</p>
-      <svg class="stat-bars" viewBox="0 0 160 56" aria-hidden="true">
-        <rect x="0" y="14" width="22" height="42" rx="3"/><rect x="34" y="8" width="22" height="48" rx="3"/>
-        <rect x="68" y="12" width="22" height="44" rx="3"/><rect x="102" y="4" width="22" height="52" rx="3"/>
-        <rect x="136" y="10" width="22" height="46" rx="3"/>
-      </svg>
-    </div>
-    <div class="stat-card stat-accent">
-      <span class="pill pill-sm pill-on-dark">Sensors</span>
-      <div class="stat-num">3</div>
-      <p>EMG, flex and contact, on one glove.</p>
-    </div>
-  </section>
-
-  <section class="status-band full-bleed" id="statusBand">
-    <div class="status-band-inner">
-      <div class="scope is-sample" id="heroScope">
-        <div class="scope-head">
-          <span class="scope-label"><span class="product-name">REACH</span>: STATUS</span>
-          <span class="scope-label" id="scopeClock">SAMPLE</span>
-        </div>
-        <div class="scope-value"><span id="scopeValueNum">128</span><span id="scopeValueUnit">kΩ · nominal</span></div>
-        <svg class="scope-wave" viewBox="0 0 400 80" preserveAspectRatio="none">
-          <polyline points="0,50 20,50 30,20 40,65 50,50 90,50 100,35 110,55 120,50 200,50 210,25 220,60 230,50 400,50"
-            fill="none" stroke="#5fbf8f" stroke-width="1.6"/>
-        </svg>
-        <div class="scope-sweep"></div>
-        <div class="scope-foot">
-          <div class="scope-stat">CONTACT<b id="scopeContact">Good</b></div>
-          <div class="scope-stat">VOLTAGE<b id="scopeVoltage">1.62 V</b></div>
-          <div class="scope-stat">BASELINE<b id="scopeBaseline">Set</b></div>
-        </div>
+      <div class="inst-foot">
+        <div class="inst-chip"><span>Contact</span><b id="scopeContact">Good</b></div>
+        <div class="inst-chip"><span>Signal</span><b id="scopeVoltage">1.62 V</b></div>
+        <div class="inst-chip"><span>Baseline</span><b id="scopeBaseline">Set</b></div>
+        <button class="btn btn-pill inst-connect" id="heroConnectBtn">Connect <span class="btn-arrow">&rarr;</span></button>
       </div>
     </div>
   </section>
 
-
-  <!-- ROADMAP -->
-  <section id="roadmap">
-    <div class="section-head">
-      <span class="pill">Tests</span>
-        <h2>Five tests,<br><span class="muted-line">one recovery picture</span></h2>
-      <p>Two are working. Three are next.</p>
-    </div>
-    <div class="roadmap-layout" id="roadmapLayout">
-      <div class="test-featured" id="testFeatured"></div>
-      <div class="test-grid" id="testGrid"></div>
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section id="how">
-    <div class="section-head">
-      <span class="pill">Contact</span>
-        <h2>Every test starts<br><span class="muted-line">with contact quality</span></h2>
-      <p>Every other reading rides on it. If contact is loose or uneven, changes from a shifting glove can look exactly like changes in the underlying signal — which is the one thing you can't afford when the whole point is tracking a slow recovery over weeks. A clean, low, stable resistance reading here means the glove's channel can be trusted; a high or jumpy one means an electrode needs repositioning, a quick skin wipe-down, or a firmer and more even fit before any other test runs.</p>
-    </div>
-    <div class="how-grid">
-      <div class="how-diagram">
-        <svg viewBox="0 0 460 260" width="100%">
-          <rect x="0" y="0" width="460" height="260" fill="none"/>
-          <path d="M40 190 Q230 140 420 190" stroke="#c7d3cd" stroke-width="10" fill="none" stroke-linecap="round"/>
-          <text x="230" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#5c6d68">SKIN SURFACE</text>
-
-          <circle cx="90" cy="170" r="16" fill="#2f6e63"/>
-          <text x="90" y="174" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#f4f6f4">E1</text>
-
-          <circle cx="370" cy="170" r="16" fill="#2f6e63"/>
-          <text x="370" y="174" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#f4f6f4">E2</text>
-
-          <path d="M90 154 V60 H180" stroke="#1c2b27" stroke-width="1.5" fill="none"/>
-          <path d="M370 154 V60 H280" stroke="#1c2b27" stroke-width="1.5" fill="none"/>
-
-          <rect x="180" y="45" width="100" height="30" rx="4" fill="#ffffff" stroke="#1c2b27" stroke-width="1.5"/>
-          <text x="230" y="65" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#1c2b27">R skin</text>
-
-          <path d="M230 75 V110" stroke="#1c2b27" stroke-width="1.5" fill="none"/>
-          <circle cx="230" cy="122" r="12" fill="none" stroke="#d98a3d" stroke-width="1.5"/>
-          <text x="230" y="126" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#d98a3d">V</text>
-
-          <text x="230" y="20" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#5c6d68">MEASURED PATH</text>
-        </svg>
-      </div>
-      <div class="how-steps">
-        <div class="how-step">
-          <div class="idx">1</div>
-          <div>
-            <h3>Put the glove on</h3>
-            <p>Once worn, a small known signal passes across the electrode's skin path and the board measures the voltage drop, giving a real-time resistance reading for that channel.</p>
-          </div>
-        </div>
-        <div class="how-step">
-          <div class="idx">2</div>
-          <div>
-            <h3>Calibrate to your own skin</h3>
-            <p>With the electrodes pressed on in your best, firmest placement, the board records your personal baseline resistance. Skin conductivity varies a lot from person to person, so contact quality is judged against your own baseline — not one fixed number for everyone.</p>
-          </div>
-        </div>
-        <div class="how-step">
-          <div class="idx">3</div>
-          <div>
-            <h3>Confirm contact before tracking</h3>
-            <p>Each reading is compared against your calibrated baseline and a plain verdict — excellent, good, marginal, poor, or no contact — is sent back over serial before any nerve-signal recording begins.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- UNDER THE HOOD: WIRING + DATA PIPELINE -->
-  <section id="under-the-hood">
-    <div class="section-head">
-      <h2>From a snap electrode to a plotted trend</h2>
-      <p>Three sensors, three electrodes, and one running principle underneath all of it: nothing gets judged against a fixed universal number — every reading is judged against that specific person's own calibrated baseline. Here's how a raw voltage actually turns into something worth tracking over weeks.</p>
-    </div>
-
-    <h3 style="font-size:16px; margin-bottom:16px;">Wiring, sensor by sensor</h3>
-    <div class="wiring-grid">
-
-      <div class="wiring-card">
-        <span class="status-chip-sm st-live">Live</span>
-        <h3>Contact-check circuit</h3>
-        <div class="wiring-conn">
-          <div><b>E1</b><span>→ 5V</span></div>
-          <div><b>E2</b><span>→ resistor → GND</span></div>
-          <div><b>A0</b><span>reads E2 / resistor junction</span></div>
-        </div>
-        <p>The skin between E1 and E2 behaves like the variable resistor in a standard voltage divider. Better contact means lower, steadier resistance, which shows up as a shift in the voltage A0 reads. REF sits unused here — a two-point resistance check has no use for a third, reference-only contact.</p>
-      </div>
-
-      <div class="wiring-card">
-        <span class="status-chip-sm st-next">Next</span>
-        <h3>EMG sensor</h3>
-        <div class="wiring-conn">
-          <div><b>E1</b><span>→ module active input 1</span></div>
-          <div><b>E2</b><span>→ module active input 2</span></div>
-          <div><b>REF</b><span>→ module reference input</span></div>
-          <div><b>VCC / GND</b><span>→ 5V / GND</span></div>
-          <div><b>SIG</b><span>→ A1 (kept separate from A0)</span></div>
-        </div>
-        <p>Same three electrodes get reused, not a new set. REF gives the circuit a stable, muscle-free "zero" — ambient electrical noise hits E1 and E2 almost equally, so comparing their difference cancels most of it out, and REF is what makes that comparison meaningful. Running SIG into A1 instead of A0 lets contact quality and real EMG signal be checked side by side.</p>
-        <details>
-          <summary>Electrode placement guide</summary>
-          <ul>
-            <li><b style="color:var(--ink); font-weight:600;">Muscle belly, not tendon</b> — upper-to-middle third of the forearm, closer to the elbow than the wrist.</li>
-            <li><b style="color:var(--ink); font-weight:600;">Along the fibers</b> — E1 and E2 sit one above the other along the muscle's length, a couple of centimeters apart, not side by side across the arm.</li>
-            <li><b style="color:var(--ink); font-weight:600;">REF on a bony, electrically quiet spot</b> — the wrist bone or elbow, away from active muscle tissue.</li>
-            <li><b style="color:var(--ink); font-weight:600;">Same spot, every session</b> — tracing the outline, a reference photo, or a measured distance from the elbow crease keeps week 3 comparable to week 1, instead of mistaking placement drift for real recovery change.</li>
-          </ul>
-        </details>
-      </div>
-
-      <div class="wiring-card">
-        <span class="status-chip-sm st-next">Next</span>
-        <h3>Flex sensor</h3>
-        <div class="wiring-conn">
-          <div><b>Leg 1</b><span>→ 5V</span></div>
-          <div><b>Leg 2</b><span>→ resistor → GND</span></div>
-          <div><b>A2</b><span>reads flex / resistor junction</span></div>
-        </div>
-        <p>The same voltage-divider pattern as the contact-check circuit, just with the flex sensor itself as the variable element instead of skin. It mounts across the index finger's DIP joint — the joint nearest the fingernail — matching the joint the reaction-time test is built to measure.</p>
-      </div>
-
-    </div>
-    <div class="wiring-note">All three share one common ground rail on the breadboard. Connections are made with alligator clips onto each electrode's snap button — fine for bench testing, though worth taping down or eventually soldering once real finger movement starts tugging at the wiring.</div>
-
-    <h3 style="font-size:16px; margin:40px 0 16px;">From a raw number to a recovery trend</h3>
-    <div class="pipeline-grid">
-      <div class="how-step">
-        <div class="idx">1</div>
-        <div>
-          <h3>A raw number, per sensor</h3>
-          <p>Every sensor hands the board the same basic thing: a number from 0 to 1023, since that's simply how the board's analog-to-digital conversion works. What that number represents depends on which sensor produced it — and none of it means anything universal on its own. A raw EMG reading of 600 isn't inherently "strong" or "weak."</p>
-        </div>
-      </div>
-      <div class="how-step">
-        <div class="idx">2</div>
-        <div>
-          <h3>Calibrate to the wearer</h3>
-          <p>Skin conductivity, muscle output, and finger range of motion all vary from person to person, so every sensor is judged against its own wearer's baseline rather than a fixed number: contact against a personal best-contact reading, EMG between "relaxed" and "flexed hard," the flex sensor between "straight" and "fully bent."</p>
-        </div>
-      </div>
-      <div class="how-step">
-        <div class="idx">3</div>
-        <div>
-          <h3>Resistance becomes a verdict</h3>
-          <p>The contact-check circuit turns a calibrated resistance into one of five plain verdicts — None, Poor, Marginal, Good, Excellent — averaging 10 samples first so one noisy reading can't flip the result.</p>
-        </div>
-      </div>
-      <div class="how-step">
-        <div class="idx">4</div>
-        <div>
-          <h3>Two sensors, one timed event</h3>
-          <p>The reaction-time test times the relationship between two sensors: a countdown, a randomly-timed go cue (T-cue), the EMG signal crossing above resting baseline (T-emg), and the flex sensor detecting the finger actually move (T-flex). Premotor time is T-emg minus T-cue; electromechanical delay is T-flex minus T-emg.</p>
-        </div>
-      </div>
-      <div class="how-step">
-        <div class="idx">5</div>
-        <div>
-          <h3>One run becomes one session record</h3>
-          <p>A finished test's numbers are bundled with the contact quality they were measured under, rather than stored loose. A session measured through bad contact can produce numbers that look like a real physiological change when they're really just noise — so it's never compared against a good-contact session as if the two were equivalent.</p>
-        </div>
-      </div>
-      <div class="how-step">
-        <div class="idx">6</div>
-        <div>
-          <h3>Many records become a trend</h3>
-          <p>Plotted session by session over weeks, the same metric can finally show whether recovery looks like it's improving, plateauing, or worth flagging to a clinician — instead of relying on a felt sense of "seems a bit better than last week."</p>
-        </div>
-      </div>
-    </div>
+  <section class="jump">
+    <a class="jump-tile jump-wide" href="#test-menu" data-nav="test-menu">
+      <span class="jump-k">01</span>
+      <b>Contact check</b>
+      <span class="jump-s">Verify the electrodes</span>
+    </a>
+    <a class="jump-tile jump-wide" href="#test-menu" data-nav="test-menu">
+      <span class="jump-k">02</span>
+      <b>Calibrate</b>
+      <span class="jump-s">Set your baseline</span>
+    </a>
+    <a class="jump-tile jump-dark" href="#test-menu" data-nav="test-menu">
+      <span class="jump-k">03</span>
+      <b>EMG</b>
+      <span class="jump-s">Watch the muscle fire</span>
+    </a>
+    <a class="jump-tile jump-accent" href="#test-menu" data-nav="test-menu">
+      <span class="jump-k">04</span>
+      <b>Flex</b>
+      <span class="jump-s">Bend angle, live</span>
+    </a>
+    <a class="jump-tile" href="#data" data-nav="data">
+      <span class="jump-k">05</span>
+      <b>Sessions</b>
+      <span class="jump-s">Your history over time</span>
+    </a>
   </section>
 
 </div><!-- /page-home -->
@@ -757,7 +561,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261003-5"></script>
+<script src="shared.js?v=20261003-6"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

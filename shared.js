@@ -217,14 +217,14 @@ window.Neurova = window.Neurova || {};
     if(scopeEl) scopeEl.classList.toggle('is-sample', isSample);
     if(isSample){
       setScopeText('scopeValueNum', '128');
-      setScopeText('scopeValueUnit', 'kΩ · nominal');
+      setScopeText('scopeValueUnit', 'kΩ');
       setScopeText('scopeContact', 'Good');
       setScopeText('scopeVoltage', '1.62 V');
       setScopeText('scopeBaseline', 'Set');
     } else {
       // Connected but nothing measured yet: dashes rather than last session's sample.
       setScopeText('scopeValueNum', '—');
-      setScopeText('scopeValueUnit', 'awaiting a reading');
+      setScopeText('scopeValueUnit', '—');
       setScopeText('scopeContact', '—');
       setScopeText('scopeVoltage', '—');
       // Deliberately not reading boardBaseline here: it is declared further down the file

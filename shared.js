@@ -174,6 +174,49 @@ window.Neurova = window.Neurova || {};
     roadmapLayout.addEventListener('mouseleave', () => restartRoadmapTimer());
   }
 
+
+  // ---------------- home motion ----------------
+  //
+  // Scroll reveals and a counting readout. Both are checked against
+  // prefers-reduced-motion, and both leave the page fully legible if the
+  // observer never fires -- the reveal class only ever adds opacity back.
+  (function(){
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tiles = document.querySelectorAll('.jump-tile');
+    if(tiles.length && !reduced && 'IntersectionObserver' in window){
+      tiles.forEach((t, i) => {
+        t.classList.add('reveal');
+        t.style.transitionDelay = (i * 70) + 'ms';
+      });
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.15 });
+      tiles.forEach(t => io.observe(t));
+    }
+
+    // Count the reading up once on arrival. Only for the placeholder: a real
+    // measurement should appear as itself rather than be animated towards.
+    const num = document.getElementById('scopeValueNum');
+    const panel = document.getElementById('heroScope');
+    if(num && panel && panel.classList.contains('is-sample') && !reduced){
+      const target = parseInt(num.textContent, 10);
+      if(!isNaN(target)){
+        const start = performance.now();
+        const dur = 900;
+        const step = now => {
+          const p = Math.min(1, (now - start) / dur);
+          // ease-out, so it decelerates into the value the way a gauge settles
+          num.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+          if(p < 1) requestAnimationFrame(step);
+        };
+        num.textContent = '0';
+        requestAnimationFrame(step);
+      }
+    }
+  })();
+
   // ---------------- clock ----------------
   function tickClock(){
     const clockEl = document.getElementById('scopeClock');

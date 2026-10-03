@@ -1427,3 +1427,73 @@
     .inst-panel{ padding:28px 24px; min-height:0; }
     .inst-connect{ margin-left:0; width:100%; justify-content:center; }
   }
+
+  /* ==================================================================
+     Motion. The eleken list's most repeated technique, and the thing the
+     rebuild was missing: scroll reveals, animated charts, instrument-panel
+     interactivity. All of it respects prefers-reduced-motion, which the
+     same list calls out under accessibility.
+     ================================================================== */
+
+  /* The trace draws itself on a loop, so the panel reads as an instrument
+     that is running rather than a picture of one. */
+  .inst-trace polyline{
+    stroke-dasharray:2800;
+    stroke-dashoffset:2800;
+    animation:traceDraw 7s cubic-bezier(.4,0,.2,1) infinite;
+  }
+  @keyframes traceDraw{
+    0%   { stroke-dashoffset:2800; }
+    55%  { stroke-dashoffset:0; }
+    85%  { stroke-dashoffset:0; opacity:1; }
+    100% { stroke-dashoffset:0; opacity:0; }
+  }
+
+  /* An oscilloscope sweep crossing the panel. */
+  .inst-panel::after{
+    content:''; position:absolute; top:0; bottom:0; width:120px; z-index:-1;
+    background:linear-gradient(90deg, transparent, rgba(95,191,143,0.10), transparent);
+    animation:instSweep 7s linear infinite;
+  }
+  @keyframes instSweep{ from{ transform:translateX(-140px); } to{ transform:translateX(calc(100vw + 140px)); } }
+
+  /* Faint instrument gridlines behind the reading. */
+  .inst-panel::before{
+    content:''; position:absolute; inset:0; z-index:-1; opacity:0.5;
+    background-image:
+      linear-gradient(rgba(95,191,143,0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(95,191,143,0.055) 1px, transparent 1px);
+    background-size:46px 46px;
+  }
+
+  /* The reading counts up on arrival instead of simply appearing. */
+  .inst-num{ font-variant-numeric:tabular-nums; }
+
+  /* Scroll reveal, staggered down the row. */
+  .reveal{ opacity:0; transform:translateY(22px); }
+  .reveal.in{
+    opacity:1; transform:none;
+    transition:opacity .6s cubic-bezier(.2,.8,.3,1), transform .6s cubic-bezier(.2,.8,.3,1);
+  }
+
+  /* Tiles gain an arrow that moves, rather than only lifting. */
+  .jump-tile{ position:relative; overflow:hidden; }
+  .jump-tile::after{
+    content:'→'; position:absolute; right:24px; bottom:26px;
+    font-size:19px; opacity:0; transform:translateX(-8px);
+    transition:opacity .22s ease, transform .22s cubic-bezier(.2,.8,.3,1);
+  }
+  .jump-tile:hover::after{ opacity:0.75; transform:translateX(0); }
+  .jump-tile::before{
+    content:''; position:absolute; inset:auto 0 0 0; height:2px;
+    background:currentColor; opacity:0.25;
+    transform:scaleX(0); transform-origin:left;
+    transition:transform .35s cubic-bezier(.2,.8,.3,1);
+  }
+  .jump-tile:hover::before{ transform:scaleX(1); }
+
+  @media (prefers-reduced-motion: reduce){
+    .inst-trace polyline{ animation:none; stroke-dashoffset:0; }
+    .inst-panel::after{ animation:none; display:none; }
+    .reveal{ opacity:1; transform:none; }
+  }

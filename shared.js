@@ -310,20 +310,32 @@ window.Neurova = window.Neurova || {};
   function setScopeSampleMode(isSample){
     const scopeEl = document.getElementById('heroScope');
     if(scopeEl) scopeEl.classList.toggle('is-sample', isSample);
-    // No invented readings. Disconnected, the panel shows that it has nothing to show,
-    // which is information; a plausible-looking number is not.
-    if(isSample){
-      setScopeText('scopeValueNum', '—');
-      setScopeText('scopeValueUnit', '');
-      setScopeText('scopeContact', '—');
-      setScopeText('scopeVoltage', '—');
-      setScopeText('scopeBaseline', '—');
+    // No invented readings. With nothing measured yet the panel shows a dash, which is
+    // information; a plausible-looking number is not. Real values arrive from the board,
+    // through setHeroReading, and only once it has actually measured something.
+    clearHeroReading();
+  }
+
+  function clearHeroReading(){
+    setScopeText('scopeValueLabel', 'Contact impedance');
+    setScopeText('scopeValueNum', '—');
+    setScopeText('scopeValueUnit', '');
+  }
+
+  // Shows an impedance the board reported. kΩ past a thousand, because five significant
+  // digits of ohms is noise at this size and nothing downstream needs that precision.
+  function setHeroReading(ohms, label){
+    if(ohms === null || ohms === undefined || !isFinite(ohms)){
+      clearHeroReading();
+      return;
+    }
+    setScopeText('scopeValueLabel', label);
+    if(ohms >= 1000){
+      setScopeText('scopeValueNum', (Math.round(ohms / 100) / 10).toFixed(1));
+      setScopeText('scopeValueUnit', 'kΩ');
     } else {
-      setScopeText('scopeValueNum', '—');
-      setScopeText('scopeValueUnit', '');
-      setScopeText('scopeContact', '—');
-      setScopeText('scopeVoltage', '—');
-      setScopeText('scopeBaseline', '—');
+      setScopeText('scopeValueNum', String(Math.round(ohms)));
+      setScopeText('scopeValueUnit', 'Ω');
     }
   }
 
@@ -1355,6 +1367,9 @@ window.Neurova = window.Neurova || {};
       return;
     }
     boardBaseline = { ohms: report.ohms, source: report.source };
+    // The board announces its stored baseline on boot, so the hero panel has a real
+    // number to show the moment it connects instead of sitting on a dash.
+    setHeroReading(report.ohms, 'Stored baseline');
     setTestUnlocked(true);
     renderCalibScreen();
   }
@@ -1457,6 +1472,7 @@ window.Neurova = window.Neurova || {};
         baselineOhms: result.baseline
       });
       setCalibLiveValue(result.baseline);
+      setHeroReading(result.baseline, 'Baseline');
       setResultIcon('calibIcon', 'good', false);
       setTestUnlocked(true);
       const baselineText = 'Baseline: ' + (Math.round(result.baseline * 100) / 100) + ' Ω — ';
@@ -1477,6 +1493,12 @@ window.Neurova = window.Neurova || {};
   function finishContactTest(result){
     clearTimeout(testTimeoutId);
     testing = false;
+
+    // The newest measurement wins the panel. A test with no usable samples leaves
+    // avgResistance null, and setHeroReading falls back to a dash rather than a zero.
+    if(result.avgResistance !== null && result.avgResistance !== undefined){
+      setHeroReading(result.avgResistance, 'Last contact test');
+    }
 
     logSessionIfPossible({
       type: 'contact',

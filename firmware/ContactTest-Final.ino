@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-02a rig check";
+const char FIRMWARE_VERSION[] = "2026-10-03a contact fault detail";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -181,6 +181,12 @@ float openThresholdRaw() {
 // like a resistor -- its apparent impedance measured eightfold different at 1 MOhm and at
 // 100 kOhm -- which points at an AC-coupled or actively biased input still charging when
 // the reading is taken. Sweeping this is how that gets settled without reflashing.
+// Which way the last impedance measurement failed, so a failure can say which fault it
+// was rather than just that it happened.
+enum ContactFailure { FAIL_NONE, FAIL_OPEN, FAIL_PINNED };
+ContactFailure lastContactFailure = FAIL_NONE;
+float lastContactFraction = 0;
+
 int contactSettleMs = 1200;
 
 // At megohm source impedances the ADC's sample-and-hold cannot charge in one conversion,
@@ -576,13 +582,25 @@ void runCalibration() {
     Serial.print("/");
     Serial.print(CALIB_SAMPLE_COUNT);
     Serial.print(": ");
-    Serial.println(measurable ? String(impedance, 0) : String("no contact"));
+    if (measurable) {
+      Serial.println(impedance, 0);
+    } else {
+      Serial.println(contactFailureText());
+    }
     delay(CALIB_SAMPLE_DELAY);
   }
 
   contactCircuitOff();
 
   if (validSamples < CALIB_MIN_VALID_SAMPLES) {
+    Serial.print(F("Last swing: "));
+    Serial.print(lastContactFraction * 100.0, 1);
+    Serial.println(F("% of the drive"));
+    if (lastContactFailure == FAIL_OPEN) {
+      Serial.println(F("Open line. Check both electrodes are on skin and the sink lead is seated."));
+    } else if (lastContactFailure == FAIL_PINNED) {
+      Serial.println(F("Junction pinned. Unplug the EMG jack and calibrate again."));
+    }
     Serial.println("CALIBRATION_RESULT:failed");
     return;
   }
@@ -1081,12 +1099,32 @@ float readAcAmplitude(int halfPeriodMs, int cycles) {
 bool measureContactImpedance(float &ohmsOut) {
   float amp = readAcAmplitude(CONTACT_AC_HALF_MS, 32);
   float fraction = amp / ADC_MAX_COUNTS;
-  if (fraction <= 0.001 || fraction >= 0.999) {
+  lastContactFraction = fraction;
+  if (fraction >= 0.999) {
+    // The junction follows the drive in full, so next to nothing is shunting it to
+    // ground: the path through the electrodes is broken. Electrodes off the skin.
+    lastContactFailure = FAIL_OPEN;
     ohmsOut = -1;
     return false;
   }
+  if (fraction <= 0.001) {
+    // The junction will not move at all, so something is pinning it. A real short, or
+    // a load heavy enough to look like one - the EMG module's input does this at AC.
+    lastContactFailure = FAIL_PINNED;
+    ohmsOut = -1;
+    return false;
+  }
+  lastContactFailure = FAIL_NONE;
   ohmsOut = FIXED_RESISTOR * fraction / (1.0 - fraction);
   return true;
+}
+
+// "no contact" covered two opposite faults, which made a failed calibration say nothing
+// about why it failed. These name the direction the measurement went instead.
+const __FlashStringHelper *contactFailureText() {
+  if (lastContactFailure == FAIL_OPEN) return F("no contact (open - electrodes not on skin)");
+  if (lastContactFailure == FAIL_PINNED) return F("no contact (junction pinned - shorted or loaded)");
+  return F("no contact");
 }
 
 // Turns that swing into the impedance shunting the junction. The drive swings the full

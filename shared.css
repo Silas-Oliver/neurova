@@ -1534,6 +1534,10 @@
   }
   .ec-hero-card-read{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:52px; line-height:1; color:#f3faf7; letter-spacing:-0.03em; }
   .ec-hero-card-read small{ font-size:19px; color:rgba(220,238,231,0.55); margin-left:6px; }
+  .ec-hero-card-label{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em;
+    text-transform:uppercase; color:rgba(220,238,231,0.55); margin-bottom:10px;
+  }
   .ec-hero-card-meta{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:rgba(220,238,231,0.7); }
 
   /* 2. strip ------------------------------------------------------- */

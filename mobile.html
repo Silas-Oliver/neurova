@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261003-12">
+<link rel="stylesheet" href="shared.css?v=20261003-13">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -129,6 +129,7 @@
       <button class="btn btn-pill" id="heroConnectBtn">Connect the board <span class="btn-arrow">&rarr;</span></button>
     </div>
     <div class="ec-hero-card">
+      <div class="ec-hero-card-label" id="scopeValueLabel">Contact impedance</div>
       <div class="ec-hero-card-read">
         <span id="scopeValueNum">—</span><small id="scopeValueUnit"></small>
       </div>
@@ -642,7 +643,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261003-12"></script>
+<script src="shared.js?v=20261003-13"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

@@ -301,6 +301,24 @@ window.Neurova = window.Neurova || {};
     return parseInt(m[1], 10);
   }
 
+  // Matches "FLEX_LIVE:62,715" -- bend percentage first, then the raw ADC reading. The
+  // percentage is -1 until the board has both ends of the range, since a percentage of an
+  // unknown range is meaningless rather than merely imprecise.
+  function parseFlexLive(line){
+    const m = line.match(/^FLEX_LIVE:(-?\d+),([\d.]+)/i);
+    if(!m) return null;
+    return { percent: parseInt(m[1], 10), raw: parseFloat(m[2]) };
+  }
+
+  // "FLEX_CAL:flat=860.2", "FLEX_CAL:bent=570.4", "FLEX_CAL:done", "FLEX_CAL:failed -- ..."
+  function parseFlexCal(line){
+    const m = line.match(/^FLEX_CAL:(flat|bent)=([\d.]+)/i);
+    if(m) return { end: m[1].toLowerCase(), raw: parseFloat(m[2]) };
+    if(/^FLEX_CAL:done/i.test(line)) return { done: true };
+    if(/^FLEX_CAL:failed/i.test(line)) return { failed: line.replace(/^FLEX_CAL:failed\s*--?\s*/i, '') };
+    return null;
+  }
+
   // Matches "STATUS:calibrated:4820:measured", "STATUS:calibrated:4820:restored",
   // "STATUS:uncalibrated" and "BASELINE_SET:4820:restored".
   function parseBoardBaselineLine(line){
@@ -351,6 +369,11 @@ window.Neurova = window.Neurova || {};
       if(raw !== null){
         feedEmgSample(raw);
       }
+    } else if(screenName === 'FLEX'){
+      const sample = parseFlexLive(line);
+      if(sample) feedFlexSample(sample);
+      const cal = parseFlexCal(line);
+      if(cal) handleFlexCal(cal);
     }
   }
 
@@ -978,6 +1001,141 @@ window.Neurova = window.Neurova || {};
     if(toggleBtn) toggleBtn.textContent = 'Capture baseline (10s)';
     setEmgStatusText('Stay relaxed, then capture a baseline to start.');
   }
+
+
+  // ---------------- flex sensor view ----------------
+  //
+  // Deliberately simpler than the EMG view. EMG needs onset detection because the
+  // interesting event is a sudden change buried in a noisy signal. Bend angle is neither
+  // noisy nor ambiguous: the number IS the answer, so the job here is calibration and an
+  // honest plot rather than inference.
+  const FLEX_PLOT_MAX_POINTS = 240;
+  let flexPoints = [];
+  let flexStreaming = false;
+  let flexFlatRaw = null, flexBentRaw = null;
+
+  function setFlexText(id, text){
+    const el = document.getElementById(id);
+    if(el) el.textContent = text;
+  }
+
+  function feedFlexSample(sample){
+    flexPoints.push(sample);
+    if(flexPoints.length > FLEX_PLOT_MAX_POINTS) flexPoints.shift();
+    setFlexText('flexRawStat', Math.round(sample.raw));
+    // -1 is the board saying it has no range to measure against, which is a different
+    // thing from 0% and should not be displayed as one.
+    setFlexText('flexPercentStat', sample.percent < 0 ? '—' : sample.percent + '%');
+    drawFlexCanvas();
+  }
+
+  function handleFlexCal(cal){
+    if(cal.end === 'flat'){
+      flexFlatRaw = cal.raw;
+      setFlexText('flexFlatStat', Math.round(cal.raw));
+      setFlexText('flexStatusText', 'Open hand captured. Now make a full fist and capture that.');
+    } else if(cal.end === 'bent'){
+      flexBentRaw = cal.raw;
+      setFlexText('flexBentStat', Math.round(cal.raw));
+    } else if(cal.done){
+      setFlexText('flexPhaseLabel', 'CALIBRATED');
+      setFlexText('flexStatusText', 'Calibrated. Start the live view to watch the bend angle.');
+    } else if(cal.failed){
+      setFlexText('flexPhaseLabel', 'UNCALIBRATED');
+      setFlexText('flexStatusText', cal.failed);
+    }
+  }
+
+  function drawFlexCanvas(){
+    const canvas = document.getElementById('flexCanvas');
+    if(!canvas || flexPoints.length === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
+    if(canvas.width !== bw || canvas.height !== bh){ canvas.width = bw; canvas.height = bh; }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    // Fixed 0-100% axis once calibrated. The whole point of calibrating is that the scale
+    // stops moving, so an auto-scaling plot would throw that away -- a 5% wobble would
+    // fill the canvas and look like a full fist.
+    const calibrated = flexPoints.some(p => p.percent >= 0);
+    const lo = calibrated ? -10 : 0;
+    const hi = calibrated ? 110 : 1023;
+    const value = p => calibrated ? p.percent : p.raw;
+    const toY = v => h - ((v - lo) / (hi - lo)) * h;
+    const toX = i => 1 + (i / (FLEX_PLOT_MAX_POINTS - 1)) * (w - 2);
+
+    if(calibrated){
+      ctx.strokeStyle = 'rgba(47,110,99,0.18)';
+      ctx.lineWidth = 1;
+      [0, 50, 100].forEach(pct => {
+        const y = Math.round(toY(pct)) + 0.5;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      });
+    }
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#2f6e63';
+    ctx.lineWidth = 2;
+    flexPoints.forEach((p, i) => {
+      const x = toX(i), y = toY(value(p));
+      if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  function wireFlexScreen(){
+    const flatBtn = document.getElementById('flexCalFlatBtn');
+    const bentBtn = document.getElementById('flexCalBentBtn');
+    const toggleBtn = document.getElementById('flexStreamToggleBtn');
+    const backBtn = document.getElementById('flexBackBtn');
+    const goBtn = document.getElementById('goFlexBtn');
+    if(!flatBtn || !goBtn) return;
+
+    goBtn.addEventListener('click', () => {
+      flexPoints = [];
+      goTo('FLEX');
+    });
+
+    flatBtn.addEventListener('click', async () => {
+      setFlexText('flexStatusText', 'Hold your hand open and still…');
+      await sendCommand('FLEXCAL:FLAT');
+    });
+    bentBtn.addEventListener('click', async () => {
+      setFlexText('flexStatusText', 'Hold a full fist and still…');
+      await sendCommand('FLEXCAL:BENT');
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      if(flexStreaming){
+        await sendCommand('FLEX_STREAM_STOP');
+        flexStreaming = false;
+        toggleBtn.textContent = 'Start live view';
+      } else {
+        flexPoints = [];
+        const sent = await sendCommand('FLEX_STREAM_START');
+        if(!sent) return;
+        flexStreaming = true;
+        toggleBtn.textContent = 'Stop live view';
+      }
+    });
+
+    // Leaving the screen with the board still streaming would keep it talking into a view
+    // nobody is watching, and the EMG screen has the same hazard.
+    backBtn.addEventListener('click', async () => {
+      if(flexStreaming){
+        await sendCommand('FLEX_STREAM_STOP');
+        flexStreaming = false;
+        toggleBtn.textContent = 'Start live view';
+      }
+      goTo('MENU');
+    });
+  }
+  wireFlexScreen();
 
   document.getElementById('goEmgDebugBtn').addEventListener('click', () => {
     resetEmgPlotState();

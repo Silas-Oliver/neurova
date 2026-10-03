@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20260928-14">
+<link rel="stylesheet" href="shared.css?v=20261003-1">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -397,6 +397,11 @@
                 <p id="baselineOptionHint">Run a calibration first to unlock this.</p>
               </button>
             </div>
+            <button class="menu-option menu-option-aside" id="goFlexBtn">
+              <span class="menu-step">BENCH TOOL</span>
+              <h3>Flex sensor</h3>
+              <p>Calibrate the finger's range and watch the bend angle live.</p>
+            </button>
             <button class="menu-option menu-option-aside" id="goEmgDebugBtn">
               <h3>EMG live view</h3>
               <p>Bench tool &mdash; live plot of the EMG sensor. Not part of the test flow.</p>
@@ -520,6 +525,32 @@
             <div class="screen-actions">
               <button class="btn btn-primary" id="emgStreamToggleBtn">Capture baseline (10s)</button>
               <button class="btn btn-ghost" id="emgDebugBackBtn">Back</button>
+            </div>
+          </div>
+
+
+          <div class="screen" data-screen="FLEX">
+            <h3 class="screen-title">Flex sensor</h3>
+            <p class="screen-sub">The strip's resistance changes as the joint bends, but the raw number depends entirely on how it is sitting on the finger that day — so it means nothing until it is calibrated against your own range. Capture your hand open, then your hand closed, and everything after is reported as a percentage of that range. 0% is flat, 100% is fully closed.</p>
+            <div class="scope emg-scope">
+              <div class="scope-head">
+                <span class="scope-label">FLEX LIVE</span>
+                <span class="scope-label" id="flexPhaseLabel">UNCALIBRATED</span>
+              </div>
+              <canvas id="flexCanvas" width="600" height="150"></canvas>
+              <div class="scope-foot">
+                <div class="scope-stat">BEND<b id="flexPercentStat">&mdash;</b></div>
+                <div class="scope-stat">RAW<b id="flexRawStat">&mdash;</b></div>
+                <div class="scope-stat">FLAT<b id="flexFlatStat">&mdash;</b></div>
+                <div class="scope-stat">CLOSED<b id="flexBentStat">&mdash;</b></div>
+              </div>
+              <p class="scope-caption mono" id="flexStatusText">Calibrate the two ends of your range to begin.</p>
+            </div>
+            <div class="screen-actions">
+              <button class="btn btn-primary" id="flexCalFlatBtn">Capture hand open</button>
+              <button class="btn btn-primary" id="flexCalBentBtn">Capture hand closed</button>
+              <button class="btn btn-ghost" id="flexStreamToggleBtn">Start live view</button>
+              <button class="btn btn-ghost" id="flexBackBtn">Back</button>
             </div>
           </div>
 
@@ -688,7 +719,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20260928-14"></script>
+<script src="shared.js?v=20261003-1"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

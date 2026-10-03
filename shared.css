@@ -970,6 +970,7 @@
   .ios-dash{ display:none; }
   .force-mobile .ios-dash{ display:block; padding:4px 0 8px; }
   .force-mobile #page-home .hero,
+  .force-mobile #page-home .status-band,
   .force-mobile #page-home #how,
   .force-mobile #page-home #under-the-hood{ display:none; }
 
@@ -1139,3 +1140,87 @@
     font-weight:500;
     color:var(--ios-secondary);
   }
+
+  /* ==================================================================
+     Desktop visual overhaul
+     Scoped to .force-desktop so the phone layout is untouched.
+
+     Taken from the patterns in the land-book examples: display type far
+     larger than conventional body-copy scaling, full-width colour bands
+     instead of boxed columns, short declarative lines, and chrome kept
+     quiet so the content carries the page.
+     ================================================================== */
+
+  /* Lets a section escape the centred .wrap and run edge to edge, without
+     restructuring the markup around it. */
+  .force-desktop .full-bleed{
+    margin-left:calc(50% - 50vw);
+    width:100vw;
+    padding-inline:calc(50vw - 50% + 28px);
+  }
+
+  /* ---- type scale ----
+     The old hero was 42px, which is a large paragraph rather than a display
+     size. At 72px the headline becomes the thing you see first. */
+  .force-desktop .hero h1{
+    font-size:72px;
+    line-height:1.0;
+    letter-spacing:-0.035em;
+    max-width:17ch;
+  }
+  .force-desktop .hero .lede{
+    font-size:19px;
+    line-height:1.6;
+    max-width:54ch;
+    color:var(--muted);
+  }
+  .force-desktop .eyebrow{
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+  }
+  .force-desktop .section-head h2{
+    font-size:44px;
+    line-height:1.05;
+    letter-spacing:-0.03em;
+    max-width:20ch;
+  }
+  .force-desktop .section-head p{ font-size:17px; line-height:1.65; max-width:56ch; }
+
+  /* ---- hero: one column, lots of air ---- */
+  .force-desktop .hero{ padding:96px 0 72px; }
+  .force-desktop .hero-grid{ grid-template-columns:1fr; gap:0; }
+  .force-desktop .hero-actions{ margin-top:36px; gap:14px; }
+
+  /* ---- the status panel as a full-width dark band ----
+     In the examples the product shot is the full width of the page rather
+     than a panel beside the text. The readout is this product's equivalent
+     of a product shot, so it gets the same treatment. */
+  .force-desktop .status-band{
+    background:#0f1f1b;
+    padding:64px 0;
+    margin-bottom:96px;
+  }
+  .force-desktop .status-band-inner{ max-width:1120px; margin:0 auto; }
+  .force-desktop .status-band .scope{
+    border:none;
+    background:transparent;
+    padding:0;
+    box-shadow:none;
+  }
+  .force-desktop .status-band .scope-value{ font-size:84px; line-height:1; }
+  .force-desktop .status-band .scope-value span{ font-size:20px; }
+  .force-desktop .status-band .scope-wave{ height:120px; }
+  .force-desktop .status-band .scope-foot{ margin-top:28px; }
+
+  /* ---- section rhythm ----
+     The gaps between sections were inconsistent, which reads as accidental.
+     One value everywhere, and a generous one. */
+  .force-desktop #roadmap,
+  .force-desktop #how,
+  .force-desktop #under-the-hood{ padding:0 0 96px; }
+  .force-desktop .section-head{ margin-bottom:40px; }
+
+  /* ---- quieter chrome ---- */
+  .force-desktop .topnav a{ font-size:14px; }
+  .force-desktop .site-header{ border-bottom:1px solid var(--line); }

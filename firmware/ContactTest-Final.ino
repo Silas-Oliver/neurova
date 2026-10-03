@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-01a rail settling fix";
+const char FIRMWARE_VERSION[] = "2026-10-02a rig check";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -245,6 +245,20 @@ const unsigned long EEPROM_FLEX_MAGIC = 0x4E524658UL;  // "NRFX"
 // Endpoints closer together than this are not a hand opening and closing -- most likely
 // the same pose captured twice, which would make every later reading meaningless.
 const float FLEX_MIN_SPAN_COUNTS = 60.0;
+
+// A saved snapshot of the rig in a state that worked. The hard part of this build has not
+// been getting a signal, it has been getting back to a signal after something moved: a pin
+// loose in a barrel plug, a jack, three unsecured leads. Comparing today's rig against a
+// recorded good one turns "it worked yesterday" into a number per subsystem.
+const int EEPROM_ADDR_CHECK_MAGIC = 28;
+const int EEPROM_ADDR_CHECK_RAIL = 32;
+const int EEPROM_ADDR_CHECK_CONTACT = 36;
+const int EEPROM_ADDR_CHECK_EMG = 40;
+const unsigned long EEPROM_CHECK_MAGIC = 0x4E524348UL;  // "NRCH"
+// Deviations beyond these are worth pointing at. Generous on the rail, which is a supply
+// and should barely move; looser on contact, which legitimately varies with skin.
+const float CHECK_RAIL_TOLERANCE_V = 0.25;
+const float CHECK_CONTACT_TOLERANCE_FRAC = 0.20;
 
 float baselineResistance = -1;
 bool isCalibrated = false;
@@ -749,7 +763,8 @@ void setup() {
   contactCircuitOff();
   pinMode(MODULE_RELAY_PIN, OUTPUT);
   digitalWrite(MODULE_RELAY_PIN, LOW);   // released: module connected, as it was before
-  loadFlexCalibration();   // without this the saved endpoints are written and never read
+  loadFlexCalibration();
+  loadCheckReference();   // without this the saved endpoints are written and never read
 
   Serial.print("System Ready. Firmware: ");
   Serial.println(FIRMWARE_VERSION);
@@ -779,6 +794,18 @@ const char *const DIGIT_COMMANDS[] PROGMEM = {
 };
 
 char lastCommand[20] = "";
+
+float measureRailVolts(){
+  analogRead(RAIL_PIN);
+  delayMicroseconds(500);
+  analogRead(RAIL_PIN);
+  long sum = 0;
+  for(int i = 0; i < 64; i++){
+    delayMicroseconds(200);
+    sum += analogRead(RAIL_PIN);
+  }
+  return ((float)sum / 64) * (ADC_REFERENCE_V / ADC_MAX_COUNTS) * RAIL_DIVIDER_RATIO;
+}
 
 void runRailReading(){
   // One discard is not enough at any real source impedance. The first reading of this pin
@@ -813,6 +840,94 @@ void runRailReading(){
   } else {
     Serial.println(F("In range. The supply is not what is stopping it."));
   }
+}
+
+// ---------------- rig check ----------------
+
+float checkRefRail = 0, checkRefContact = 0, checkRefEmg = 0;
+bool checkRefValid = false;
+
+void loadCheckReference(){
+  unsigned long magic = 0;
+  EEPROM.get(EEPROM_ADDR_CHECK_MAGIC, magic);
+  if(magic != EEPROM_CHECK_MAGIC) return;
+  EEPROM.get(EEPROM_ADDR_CHECK_RAIL, checkRefRail);
+  EEPROM.get(EEPROM_ADDR_CHECK_CONTACT, checkRefContact);
+  EEPROM.get(EEPROM_ADDR_CHECK_EMG, checkRefEmg);
+  if(isnan(checkRefRail) || isnan(checkRefContact) || isnan(checkRefEmg)) return;
+  checkRefValid = true;
+}
+
+// Resting level and how much it wanders. The spread matters as much as the level: a signal
+// buried in noise and a quiet one can sit at the same mean.
+void measureEmgIdle(float &meanOut, int &spreadOut){
+  unsigned long start = millis();
+  long sum = 0; unsigned int n = 0;
+  int lo = ADC_MAX_COUNTS, hi = 0;
+  while(millis() - start < 1000){
+    int s = analogRead(EMG_PIN);
+    sum += s; n++;
+    if(s < lo) lo = s;
+    if(s > hi) hi = s;
+  }
+  meanOut = n ? (float)sum / n : 0;
+  spreadOut = hi - lo;
+}
+
+void printDelta(float now, float ref, float tolAbs, float tolFrac){
+  float allowed = (tolFrac > 0) ? (ref * tolFrac) : tolAbs;
+  float diff = now - ref;
+  Serial.print(F("  (was "));
+  Serial.print(ref, (ref > 100 ? 0 : 2));
+  Serial.print(F(", "));
+  if(fabs(diff) <= allowed) Serial.print(F("matches"));
+  else {
+    Serial.print(diff > 0 ? F("+") : F("-"));
+    Serial.print(fabs(diff), (ref > 100 ? 0 : 2));
+    Serial.print(F(" OFF"));
+  }
+  Serial.println(F(")"));
+}
+
+void runCheck(bool save){
+  Serial.println(F("--- CHECK ---"));
+
+  float rail = measureRailVolts();
+  Serial.print(F("Supply   "));
+  Serial.print(rail, 2);
+  Serial.print(F(" V"));
+  if(rail < 3.5) Serial.print(F("   BELOW the sensor minimum"));
+  if(checkRefValid && !save) printDelta(rail, checkRefRail, CHECK_RAIL_TOLERANCE_V, 0);
+  else Serial.println();
+
+  float contact = readAcAmplitude(CONTACT_AC_HALF_MS, 32);
+  Serial.print(F("Contact  "));
+  Serial.print(contact, 1);
+  Serial.print(F(" counts"));
+  if(checkRefValid && !save) printDelta(contact, checkRefContact, 0, CHECK_CONTACT_TOLERANCE_FRAC);
+  else Serial.println();
+
+  float emgMean; int emgSpread;
+  measureEmgIdle(emgMean, emgSpread);
+  Serial.print(F("EMG idle "));
+  Serial.print(emgMean, 1);
+  Serial.print(F("  spread "));
+  Serial.print(emgSpread);
+  if(checkRefValid && !save) printDelta(emgMean, checkRefEmg, 0, CHECK_CONTACT_TOLERANCE_FRAC);
+  else Serial.println();
+
+  if(save){
+    checkRefRail = rail; checkRefContact = contact; checkRefEmg = emgMean;
+    checkRefValid = true;
+    EEPROM.put(EEPROM_ADDR_CHECK_MAGIC, EEPROM_CHECK_MAGIC);
+    EEPROM.put(EEPROM_ADDR_CHECK_RAIL, rail);
+    EEPROM.put(EEPROM_ADDR_CHECK_CONTACT, contact);
+    EEPROM.put(EEPROM_ADDR_CHECK_EMG, emgMean);
+    Serial.println(F("Saved as the reference for this rig."));
+  } else if(!checkRefValid){
+    Serial.println(F("No reference saved. Run CHECK:SAVE while it is working."));
+  }
+  Serial.println(F("--- CHECK COMPLETE ---"));
 }
 
 // ---------------- flex sensor ----------------
@@ -1010,7 +1125,7 @@ void printMenu() {
   Serial.println(F("  4 STATUS           9 FORGET (clears saved baseline)"));
   Serial.println(F("  5 EMG              0 repeat last"));
   Serial.println(F("  SETBASELINE:<ohms> | SETTLE:<ms> | AC[:<halfMs>] | MENU"));
-  Serial.println(F("  RAIL | FLEX | FLEXCAL:FLAT | FLEXCAL:BENT | FLEXCAL:STATUS"));
+  Serial.println(F("  CHECK | CHECK:SAVE | RAIL | FLEX | FLEXCAL:FLAT | FLEXCAL:BENT"));
   Serial.println(F("  FLEX_STREAM_START | FLEX_STREAM_STOP"));
 }
 
@@ -1060,6 +1175,10 @@ void loop() {
         Serial.println("Warning: not calibrated yet, using default thresholds.");
       }
       runContactTest();
+    } else if (input == "CHECK") {
+      runCheck(false);
+    } else if (input == "CHECK:SAVE") {
+      runCheck(true);
     } else if (input == "RAIL") {
       runRailReading();
     } else if (input == "FLEX") {

@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03c settling vs scatter";
+const char FIRMWARE_VERSION[] = "2026-10-03d flash strings";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -468,25 +468,25 @@ void readEmgWindow(int &meanOut, int &peakToPeakOut) {
 // in the third means the resistor or the drive pin is not connected.
 void runDiagnostics() {
   moduleSwitch(false);
-  Serial.println("--- DIAG ---");
+  Serial.println(F("--- DIAG ---"));
 
   contactCircuitOn();
-  Serial.print("D2=HIGH D3=LOW    raw=");
+  Serial.print(F("D2=HIGH D3=LOW    raw="));
   Serial.println(readContactAdc(), 2);
 
   digitalWrite(CONTACT_DRIVE_PIN, LOW);
   delay(contactSettleMs);
-  Serial.print("D2=LOW  D3=LOW    raw=");
+  Serial.print(F("D2=LOW  D3=LOW    raw="));
   Serial.println(readContactAdc(), 2);
 
   digitalWrite(CONTACT_DRIVE_PIN, HIGH);
   pinMode(CONTACT_SINK_PIN, INPUT);
   delay(contactSettleMs);
-  Serial.print("D2=HIGH D3=float  raw=");
+  Serial.print(F("D2=HIGH D3=float  raw="));
   Serial.println(readContactAdc(), 2);
 
   contactCircuitOff();
-  Serial.println("--- DIAG COMPLETE ---");
+  Serial.println(F("--- DIAG COMPLETE ---"));
 }
 
 // Three distinguishable states, not two.
@@ -539,12 +539,12 @@ PathState contactPathState() {
 // legitimate calibrations more often than it caught a real fault, so it now says what it
 // saw and lets the reading proceed to be judged on its own merits.
 void reportPathSuspect() {
-  Serial.print("Note: the sink pin barely moved the junction (released ");
+  Serial.print(F("Note: the sink pin barely moved the junction (released "));
   Serial.print(lastPathReleased, 1);
-  Serial.print(", sinking ");
+  Serial.print(F(", sinking "));
   Serial.print(lastPathSinking, 1);
-  Serial.println("). If the EMG module is still plugged in, unplug it -- its input bias would");
-  Serial.println("make every reading below its bias rather than your skin. Proceeding anyway.");
+  Serial.println(F("). If the EMG module is still plugged in, unplug it -- its input bias would"));
+  Serial.println(F("make every reading below its bias rather than your skin. Proceeding anyway."));
 }
 
 // Energises the divider. Only on while a reading is actually being taken, so the
@@ -577,7 +577,7 @@ ContactState classifyContact(float rawReading, float &resistanceOut) {
 
 void runCalibration() {
   moduleSwitch(false);
-  Serial.println("--- CALIBRATION STARTED ---");
+  Serial.println(F("--- CALIBRATION STARTED ---"));
   if (contactPathState() == PATH_BLOCKED) reportPathSuspect();
   contactCircuitOn();
 
@@ -608,11 +608,11 @@ void runCalibration() {
       }
       validSamples++;
     }
-    Serial.print("Calibration sample ");
+    Serial.print(F("Calibration sample "));
     Serial.print(i + 1);
-    Serial.print("/");
+    Serial.print(F("/"));
     Serial.print(CALIB_SAMPLE_COUNT);
-    Serial.print(": ");
+    Serial.print(F(": "));
     if (measurable) {
       Serial.println(impedance, 0);
     } else {
@@ -632,7 +632,7 @@ void runCalibration() {
     } else if (lastContactFailure == FAIL_PINNED) {
       Serial.println(F("Junction pinned. Unplug the EMG jack and calibrate again."));
     }
-    Serial.println("CALIBRATION_RESULT:failed");
+    Serial.println(F("CALIBRATION_RESULT:failed"));
     return;
   }
 
@@ -669,7 +669,7 @@ void runCalibration() {
       Serial.println(F("Readings are scattered, so the mean is not a measurement."));
       Serial.println(F("Press the electrodes firmly and calibrate again."));
     }
-    Serial.println("CALIBRATION_RESULT:failed");
+    Serial.println(F("CALIBRATION_RESULT:failed"));
     return;
   }
 
@@ -682,20 +682,20 @@ void runCalibration() {
     } else {
       Serial.println(F("Reseat the electrodes against bare skin."));
     }
-    Serial.println("CALIBRATION_RESULT:failed");
+    Serial.println(F("CALIBRATION_RESULT:failed"));
     return;
   }
 
   if (measured < MIN_PLAUSIBLE_BASELINE || measured > MAX_PLAUSIBLE_BASELINE) {
-    Serial.print("Measured ");
+    Serial.print(F("Measured "));
     Serial.print(measured, 0);
-    Serial.println(" ohms, outside the plausible range for skin — check electrode contact and the fixed resistor value.");
-    Serial.println("CALIBRATION_RESULT:failed");
+    Serial.println(F(" ohms, outside the plausible range for skin — check electrode contact and the fixed resistor value."));
+    Serial.println(F("CALIBRATION_RESULT:failed"));
     return;
   }
 
   applyBaseline(measured, false);
-  Serial.print("CALIBRATION_RESULT:done:");
+  Serial.print(F("CALIBRATION_RESULT:done:"));
   Serial.println(baselineResistance, 0);
 }
 
@@ -705,31 +705,31 @@ void runCalibration() {
 void setBaselineFromSerial(const String &payload) {
   float ohms = payload.toFloat();
   if (ohms < MIN_PLAUSIBLE_BASELINE || ohms > MAX_PLAUSIBLE_BASELINE) {
-    Serial.println("BASELINE_SET:failed");
+    Serial.println(F("BASELINE_SET:failed"));
     return;
   }
   applyBaseline(ohms, true);
-  Serial.print("BASELINE_SET:");
+  Serial.print(F("BASELINE_SET:"));
   Serial.print(baselineResistance, 0);
-  Serial.println(":restored");
+  Serial.println(F(":restored"));
 }
 
 // A resistance only means something alongside the divider that produced it. The website
 // stores this with every logged session so a resistor swap cannot silently make old and
 // new readings look comparable when they are not.
 void reportConfig() {
-  Serial.print("CONFIG:");
+  Serial.print(F("CONFIG:"));
   Serial.print(FIXED_RESISTOR, 0);
-  Serial.print(":");
+  Serial.print(F(":"));
   Serial.println(ADC_REFERENCE_V, 2);
 }
 
 void reportStatus() {
   if (!isCalibrated) {
-    Serial.println("STATUS:uncalibrated");
+    Serial.println(F("STATUS:uncalibrated"));
     return;
   }
-  Serial.print("STATUS:calibrated:");
+  Serial.print(F("STATUS:calibrated:"));
   Serial.print(baselineResistance, 0);
   Serial.println(baselineWasRestored ? ":restored" : ":measured");
 }
@@ -744,7 +744,7 @@ void runContactTest() {
   float resistanceSum = 0;
   int resistanceSamples = 0;
 
-  Serial.println("--- CONTACT TEST STARTED ---");
+  Serial.println(F("--- CONTACT TEST STARTED ---"));
 
   for (int i = 0; i < TEST_SAMPLE_COUNT; i++) {
     float resistance;
@@ -769,14 +769,14 @@ void runContactTest() {
       noContactCount++;
     }
 
-    Serial.print("Sample ");
+    Serial.print(F("Sample "));
     Serial.print(i + 1);
-    Serial.print("/");
+    Serial.print(F("/"));
     Serial.print(TEST_SAMPLE_COUNT);
-    Serial.print(": ");
-    if (state == GOOD_CONTACT) Serial.println("GOOD");
-    else if (state == POOR_CONTACT) Serial.println("POOR");
-    else Serial.println("NONE");
+    Serial.print(F(": "));
+    if (state == GOOD_CONTACT) Serial.println(F("GOOD"));
+    else if (state == POOR_CONTACT) Serial.println(F("POOR"));
+    else Serial.println(F("NONE"));
 
     delay(TEST_SAMPLE_DELAY);
   }
@@ -791,20 +791,20 @@ void runContactTest() {
   else if (goodPercent >= 40) verdict = "MARGINAL";
   else verdict = "POOR";
 
-  Serial.print("TEST_RESULT:");
+  Serial.print(F("TEST_RESULT:"));
   Serial.print(verdict);
-  Serial.print(":");
+  Serial.print(F(":"));
   Serial.print(goodCount);
-  Serial.print(",");
+  Serial.print(F(","));
   Serial.print(poorCount);
-  Serial.print(",");
+  Serial.print(F(","));
   Serial.print(noContactCount);
-  Serial.print(":");
+  Serial.print(F(":"));
   if (avgResistance >= 0) Serial.println(avgResistance, 0);
-  else Serial.println("N/A");
+  else Serial.println(F("N/A"));
 
   contactCircuitOff();
-  Serial.println("--- CONTACT TEST COMPLETE ---");
+  Serial.println(F("--- CONTACT TEST COMPLETE ---"));
 }
 
 // Takes a short burst of raw EMG readings and reports the average, minimum, and maximum.
@@ -812,7 +812,7 @@ void runContactTest() {
 // been tuned on real data, and guessing at one here would be the same mistake as the
 // invented GOOD_CONTACT_MULTIPLE was before it got tuned against something real.
 void runEmgReading() {
-  Serial.println("--- EMG READING STARTED ---");
+  Serial.println(F("--- EMG READING STARTED ---"));
   contactCircuitOff();
   delay(EMG_SETTLE_MS);
 
@@ -830,14 +830,14 @@ void runEmgReading() {
 
   int avgReading = sum / EMG_SAMPLE_COUNT;
 
-  Serial.print("EMG_RESULT:");
+  Serial.print(F("EMG_RESULT:"));
   Serial.print(avgReading);
-  Serial.print(",");
+  Serial.print(F(","));
   Serial.print(minReading);
-  Serial.print(",");
+  Serial.print(F(","));
   Serial.println(maxReading);
 
-  Serial.println("--- EMG READING COMPLETE ---");
+  Serial.println(F("--- EMG READING COMPLETE ---"));
 }
 
 // ---------------- setup / loop ----------------
@@ -860,7 +860,7 @@ void setup() {
   loadFlexCalibration();
   loadCheckReference();   // without this the saved endpoints are written and never read
 
-  Serial.print("System Ready. Firmware: ");
+  Serial.print(F("System Ready. Firmware: "));
   Serial.println(FIRMWARE_VERSION);
   reportConfig();
   reportStatus();  // so the website knows immediately whether it has to ask for a calibration
@@ -1286,7 +1286,7 @@ void loop() {
       runCalibration();
     } else if (input == "TEST") {
       if (!isCalibrated) {
-        Serial.println("Warning: not calibrated yet, using default thresholds.");
+        Serial.println(F("Warning: not calibrated yet, using default thresholds."));
       }
       runContactTest();
     } else if (input == "CHECK") {
@@ -1323,13 +1323,13 @@ void loop() {
     } else if (input.startsWith("SETBASELINE:")) {
       setBaselineFromSerial(input.substring(12));
     } else if (input == "VERSION") {
-      Serial.print("FIRMWARE:");
+      Serial.print(F("FIRMWARE:"));
       Serial.println(FIRMWARE_VERSION);
     } else if (input == "DIAG") {
       runDiagnostics();
     } else if (input == "FORGET") {
       forgetBaselineInEeprom();
-      Serial.println("BASELINE_FORGOTTEN");
+      Serial.println(F("BASELINE_FORGOTTEN"));
       reportStatus();
     } else if (input == "STATUS") {
       reportConfig();
@@ -1341,10 +1341,10 @@ void loop() {
       lastEmgStreamSampleTime = millis();
       contactCircuitOff();
       delay(EMG_SETTLE_MS);   // let the amplifier recover before the first sample goes out
-      Serial.println("EMG_STREAM:started");
+      Serial.println(F("EMG_STREAM:started"));
     } else if (input == "EMG_STREAM_STOP") {
       emgStreaming = false;
-      Serial.println("EMG_STREAM:stopped");
+      Serial.println(F("EMG_STREAM:stopped"));
     } else {
       handled = false;
     }
@@ -1375,9 +1375,9 @@ void loop() {
       readEmgWindow(emgMean, emgPeakToPeak);
       // The website's parser reads the first number and ignores the rest, so adding the
       // spread here tells us more without changing what the site already understands.
-      Serial.print("EMG_LIVE:");
+      Serial.print(F("EMG_LIVE:"));
       Serial.print(emgMean);
-      Serial.print(",");
+      Serial.print(F(","));
       Serial.println(emgPeakToPeak);
     }
   }

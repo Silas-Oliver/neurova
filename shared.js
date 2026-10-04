@@ -347,10 +347,10 @@ window.Neurova = window.Neurova || {};
   function setConnectedUI(connected){
     setScopeSampleMode(!connected);
     [topStatusDot, panelStatusDot].forEach(d => d.classList.toggle('on', connected));
-    topStatusText.textContent = connected ? 'Board connected' : 'No device connected';
+    topStatusText.textContent = connected ? 'Glove connected' : 'No glove connected';
     panelStatusText.textContent = connected ? 'Connected' : 'Not connected';
     enterMenuBtn.disabled = !connected;
-    heroConnectBtn.textContent = connected ? 'Board connected' : 'Connect the board';
+    heroConnectBtn.textContent = connected ? 'Glove connected' : 'Connect your glove';
     heroConnectBtn.disabled = connected;
     panelConnectBtn.textContent = connected ? 'Disconnect' : 'Connect';
   }
@@ -374,7 +374,7 @@ window.Neurova = window.Neurova || {};
     }catch(err){
       if(err && err.name !== 'NotFoundError'){
         console.error(err);
-        alert('Could not connect: ' + err.message + (err.message && err.message.toLowerCase().includes('open') ? '\n\nThis usually means something else has the port — close the Arduino IDE\'s Serial Monitor/Plotter, close other tabs using this port, or unplug and replug the board, then try again.' : ''));
+        alert('Could not connect: ' + err.message + (err.message && err.message.toLowerCase().includes('open') ? '\n\nThis usually means something else has the port — close the Arduino IDE\'s Serial Monitor/Plotter, close other tabs using this port, or unplug and replug your glove, then try again.' : ''));
       }
     }
   }
@@ -405,7 +405,7 @@ window.Neurova = window.Neurova || {};
 
   async function sendCommand(cmd){
     if(!writer){
-      alert('Connect the board first.');
+      alert('Connect your glove first.');
       return false;
     }
     const encoder = new TextEncoder();

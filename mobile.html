@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261004-16">
+<link rel="stylesheet" href="shared.css?v=20261004-17">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -131,7 +131,7 @@
       <span class="ec-hero-brand">Neurova <b>Reach</b></span>
       <p class="ec-hero-lead">A compression glove that tracks nerve recovery in your hand.</p>
       <p class="ec-hero-note">It calibrates to <em>your</em> body first, then logs every session over time.</p>
-      <button class="btn btn-pill" id="heroConnectBtn">Connect the board <span class="btn-arrow">&rarr;</span></button>
+      <button class="btn btn-pill" id="heroConnectBtn">Connect your glove <span class="btn-arrow">&rarr;</span></button>
     </div>
     <div class="ec-hero-card">
       <div class="ec-hero-card-label" id="scopeValueLabel">Contact impedance</div>
@@ -242,7 +242,7 @@
     <div class="ec-faq">
       <details><summary>Why does contact have to be checked first?</summary><p>Every other reading rides on it. Loose contact produces the same result as no recovery.</p></details>
       <details><summary>Why dry electrodes instead of gel?</summary><p>Gel works better but is single-use. A glove you wear daily cannot depend on it.</p></details>
-      <details><summary>Does it work on a phone?</summary><p>Not yet. The browser feature that talks to the board only exists on desktop Chrome and Edge.</p></details>
+      <details><summary>Does it work on a phone?</summary><p>Not yet. The browser feature that talks to your glove only exists on desktop Chrome and Edge.</p></details>
       <details><summary>Where does my data go?</summary><p>To your account, or nowhere at all if you are not signed in.</p></details>
     </div>
   </section>
@@ -269,12 +269,12 @@
       <div class="mobile-hardware-explainer">
         <h3>This part needs a laptop</h3>
         <p>Live connection to the glove uses a browser feature (Web Serial) that only exists in Chrome or Edge on a desktop or laptop — no phone browser supports it, including Safari and Chrome on iPhone and Android. That's a browser limitation, not something this site can work around with layout or design changes.</p>
-        <p>Everything else here works fine on your phone: Home, Data, Specs, and your Account all just aren't wired to live hardware. When you're ready to actually run a calibration or contact test, open this same site in Chrome or Edge on a computer with the board plugged in.</p>
+        <p>Everything else here works fine on your phone: Home, Data, Specs, and your Account all just aren't wired to live hardware. When you're ready to actually run a calibration or contact test, open this same site in Chrome or Edge on a computer with your glove plugged in.</p>
       </div>
 
       <div class="live-hardware-block">
       <div id="unsupportedNotice" class="unsupported" style="display:none;">
-        This browser doesn't support Web Serial. Open this page in Chrome or Edge on desktop to connect the board directly.
+        This browser doesn't support Web Serial. Open this page in Chrome or Edge on desktop to connect your glove directly.
       </div>
 
       <div class="panel-shell">
@@ -294,7 +294,7 @@
           <!-- HOME -->
           <div class="screen active" data-screen="HOME">
             <h3 class="screen-title">Ready</h3>
-            <p class="screen-sub">Connect the board, then open the menu to run a calibration or a contact test.</p>
+            <p class="screen-sub">Connect your glove, then open the menu to run a calibration or a contact test.</p>
             <div class="screen-actions">
               <button class="btn btn-primary" id="enterMenuBtn" disabled>Open menu</button>
             </div>
@@ -369,7 +369,7 @@
                 <div class="verdict-text" id="calibStatusText" style="--accent: var(--muted);">Idle</div>
                 <div class="summary-text" id="calibSummaryText">Run calibration to capture a baseline.</div>
                 <details class="raw-log">
-                  <summary>Raw board log</summary>
+                  <summary>Raw glove log</summary>
                   <div class="mini-feed mono" id="calibLog"></div>
                 </details>
               </div>
@@ -407,7 +407,7 @@
                 <div class="summary-text" id="summaryText">Run the test to sample this placement.</div>
                 <div class="stat-pills" id="statPills"></div>
                 <details class="raw-log">
-                  <summary>Raw board log</summary>
+                  <summary>Raw glove log</summary>
                   <div class="mini-feed mono" id="testLog"></div>
                 </details>
               </div>
@@ -436,7 +436,7 @@
           <!-- EMG_DEBUG (dev tool — not a roadmap test, no verdict or logging) -->
           <div class="screen" data-screen="EMG_DEBUG">
             <h3 class="screen-title">EMG live view (dev)</h3>
-            <p class="screen-sub">Stay relaxed for a 10-second baseline capture first, then the plot switches to a fixed scale and watches for the moment the signal starts climbing sharply — the onset of a movement, not how high it gets. Faint line is raw; bright line is smoothed; dashed line is your baseline. The smoothed line turns green for as long as the board judges you to be contracting. Bench tool only — nothing here is logged or scored.</p>
+            <p class="screen-sub">Stay relaxed for a 10-second baseline capture first, then the plot switches to a fixed scale and watches for the moment the signal starts climbing sharply — the onset of a movement, not how high it gets. Faint line is raw; bright line is smoothed; dashed line is your baseline. The smoothed line turns green for as long as the glove judges you to be contracting. Bench tool only — nothing here is logged or scored.</p>
             <div class="scope emg-scope">
               <div class="scope-head">
                 <span class="scope-label">EMG LIVE</span>
@@ -614,7 +614,7 @@
 </div><!-- /page-account -->
 
   <footer>
-    Runs entirely in this tab — nothing is sent anywhere but your board. Requires Chrome or Edge on desktop for the connect button to work.
+    Runs entirely in this tab — nothing is sent anywhere but your glove. Requires Chrome or Edge on desktop for the connect button to work.
   </footer>
   <div class="version-switch"><a href="desktop.html" onclick="setNeurovaVersion('desktop')">Switch to desktop version</a></div>
 
@@ -648,7 +648,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261004-16"></script>
+<script src="shared.js?v=20261004-17"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

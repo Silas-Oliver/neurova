@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03h relative spread";
+const char FIRMWARE_VERSION[] = "2026-10-03i burst";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -244,6 +244,10 @@ const float MIN_GOOD_CONTACT_THRESHOLD = 20000.0;
 // of that is a number with no measurement behind it, and storing it as a reference makes
 // every later verdict meaningless.
 const float CALIB_MAX_SPREAD_FRAC = 0.25;
+
+// One cycle per sample and no delay between them, so the burst catches chatter that a
+// 250 ms stream aliases into apparent randomness. 200 of them take about a second.
+const int BURST_SAMPLES = 200;
 
 // A baseline is the good-contact reference every later verdict is measured against, so
 // storing a poor-contact value does not just make one reading wrong -- it raises the pass
@@ -1249,6 +1253,90 @@ const __FlashStringHelper *contactFailureText() {
   return F("no contact");
 }
 
+// Samples as fast as the drive allows and reports how the readings are distributed
+// rather than what they averaged. The question this answers is which of three mechanisms
+// is moving the number, and they have different shapes: moisture drifts slowly in one
+// direction, pressure tracks the pressing, and a loose connection jumps between two
+// states with little time in between. Only the third is bimodal, and an average destroys
+// exactly that information -- as does any multi-cycle measurement, so this takes one
+// cycle per sample. A mean of 400k tells you nothing about whether it was 400k all along
+// or alternated between 2k and open.
+void printBurstRow(const __FlashStringHelper *label, unsigned int n) {
+  Serial.print(F("  "));
+  Serial.print(label);
+  Serial.print(F(" "));
+  if (n < 100) Serial.print(F(" "));
+  if (n < 10) Serial.print(F(" "));
+  Serial.print(n);
+  Serial.print(F("  "));
+  for (unsigned int i = 0; i < (n * 20) / BURST_SAMPLES; i++) Serial.print('#');
+  Serial.println();
+}
+
+void runBurst() {
+  moduleSwitch(false);
+  unsigned int buckets[5] = {0, 0, 0, 0, 0};
+  unsigned int pinned = 0;
+  unsigned int opens = 0;
+  float minOhms = 0, maxOhms = 0;
+  bool seen = false;
+
+  Serial.println(F("--- BURST ---"));
+  unsigned long start = millis();
+  for (int i = 0; i < BURST_SAMPLES; i++) {
+    float amp = readAcAmplitude(CONTACT_AC_HALF_MS, 1);
+    float f = amp / ADC_MAX_COUNTS;
+    if (f >= 0.999) { opens++; continue; }
+    if (f <= 0.001) { pinned++; continue; }
+    float z = FIXED_RESISTOR * f / (1.0 - f);
+    if (!seen) { minOhms = z; maxOhms = z; seen = true; }
+    else { if (z < minOhms) minOhms = z; if (z > maxOhms) maxOhms = z; }
+    if (z < 5000) buckets[0]++;
+    else if (z < 20000) buckets[1]++;
+    else if (z < 100000) buckets[2]++;
+    else if (z < 500000) buckets[3]++;
+    else buckets[4]++;
+  }
+  unsigned long took = millis() - start;
+  contactCircuitOff();
+
+  printBurstRow(F("under 5k  "), buckets[0]);
+  printBurstRow(F("5k to 20k "), buckets[1]);
+  printBurstRow(F("20k to100k"), buckets[2]);
+  printBurstRow(F("100k to 500k"), buckets[3]);
+  printBurstRow(F("over 500k "), buckets[4]);
+  printBurstRow(F("pinned    "), pinned);
+  printBurstRow(F("open      "), opens);
+
+  Serial.print(F("Range: "));
+  if (seen) { Serial.print(minOhms, 0); Serial.print(F(" to ")); Serial.print(maxOhms, 0); Serial.print(F(" ohms")); }
+  else { Serial.print(F("nothing measurable")); }
+  Serial.print(F(", "));
+  Serial.print(BURST_SAMPLES);
+  Serial.print(F(" samples in "));
+  Serial.print(took);
+  Serial.println(F(" ms"));
+
+  // Good and bad ends against the middle. A connection that is making and breaking
+  // spends almost no time partway, so an empty middle with both ends populated is the
+  // signature. Contact that is merely poor fills the middle instead.
+  unsigned int good = buckets[0] + buckets[1] + pinned;
+  unsigned int bad = buckets[4] + opens;
+  unsigned int mid = buckets[2] + buckets[3];
+  unsigned int total = good + bad + mid;
+  if (total == 0) { Serial.println(F("VERDICT: no samples")); return; }
+  Serial.print(F("VERDICT: "));
+  if (good * 5 >= total * 4) Serial.println(F("steady, good contact"));
+  else if (bad * 5 >= total * 4) Serial.println(F("steady, no usable contact"));
+  else if (mid * 5 >= total * 4) Serial.println(F("steady, poor contact"));
+  else if (mid * 10 <= total && good * 10 >= total && bad * 10 >= total) {
+    Serial.println(F("BIMODAL - switching between connected and not."));
+    Serial.println(F("That is a loose joint, not skin. Check the snaps and leads."));
+  } else {
+    Serial.println(F("spread across the range, no clear split"));
+  }
+}
+
 // Turns that swing into the impedance shunting the junction. The drive swings the full
 // supply across the fixed resistor and whatever sits from junction to ground, so the
 // fraction of the swing that survives gives the ratio directly.
@@ -1288,6 +1376,7 @@ void printMenu() {
   Serial.println(F("  CHECK | CHECK:SAVE | RAIL | FLEX | FLEXCAL:FLAT | FLEXCAL:BENT"));
   Serial.println(F("  FLEX_STREAM_START | FLEX_STREAM_STOP"));
   Serial.println(F("  CONTACT_STREAM_START | CONTACT_STREAM_STOP"));
+  Serial.println(F("  BURST"));
 }
 
 // Turns a bare digit into the command it stands for, leaving anything else untouched.
@@ -1369,6 +1458,8 @@ void loop() {
       contactStreaming = false;
       contactCircuitOff();
       Serial.println(F("CONTACT_STREAM:stopped"));
+    } else if (input == "BURST") {
+      runBurst();
     } else if (input == "AC") {
       runAcTest(5);
     } else if (input.startsWith("AC:")) {

@@ -6,6 +6,60 @@ left to do by hand.
 
 Written for Blender 4.x; the material script also works on 3.6.
 
+## Running a script
+
+Blender's own editor, not a terminal:
+
+1. Open Blender. Click the **Scripting** tab along the top.
+2. In the text editor, **Open** (or Text > Open) and pick the `.py` file.
+3. Press the **play button** at the top right of the editor, or **Alt+P**.
+4. Output and errors appear in the **System Console**. On macOS open it with
+   Window > Toggle System Console before running, or you will not see why a
+   script stopped.
+
+Each file ends with `if __name__ == "__main__": main()`, which fires when the
+text editor runs it, so there is nothing to call by hand.
+
+What each one needs selected before you press play:
+
+| Script | Selection |
+|---|---|
+| `scene_setup.py` | nothing |
+| `glove_shell.py` | the hand mesh, selected **and** active |
+| `materials.py` | the glove (assigns fabric to whatever is selected) |
+
+Active means last clicked -- light outline rather than dark. With several things
+selected, only the active one counts.
+
+## Getting a hand out of the .blend
+
+The base mesh bundle is a `.blend`, which is a Blender file rather than a model
+format, so you bring pieces of it into your own file instead of importing it.
+
+1. **File > Append** -- not Open, which would discard your scene.
+2. Double-click into the downloaded `.blend` as though it were a folder.
+3. Go into **Object**, pick the body mesh, Append.
+
+That copies it in, with no link back to the original.
+
+Then isolate the hand, since the meshes are whole bodies:
+
+1. Tab into **Edit Mode**, press **3** for face select.
+2. Turn on **X-ray** (Alt+Z) so box select reaches through the mesh.
+3. Box-select the hand and a few centimetres of wrist.
+4. **P > Selection** to split it into its own object.
+5. Tab out, delete the body.
+
+**Then apply the scale, before anything else.** Select the hand, **Ctrl+A >
+Scale**. This matters more than it sounds: `glove_shell.py` works in real units
+-- a 1.5mm offset and 1.2mm thickness -- and those are multiplied by the
+object's scale. On a mesh scaled to 0.01 your 1.5mm gap becomes 15 microns and
+the shell will look like it did nothing.
+
+Check the size in the **N panel > Item > Dimensions** while you are there. A
+hand runs about 0.19m wrist to fingertip. If the mesh is in centimetres it will
+read 19, and the lighting rig will be inside the model.
+
 ## Order
 
 1. **Get a hand.** Blender Studio publishes CC0 human base meshes, which include

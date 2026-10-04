@@ -1731,9 +1731,10 @@
      30px radii, so it read as a different site rather than a different page. */
   #page-test-menu .panel-section{
     background:transparent; border-top:none; border-bottom:none;
-    /* section{padding:56px 0} is the old page rhythm. The intro carries its own, and
-       stacking the two put this page's heading 56px lower than the home page's. */
-    padding:0;
+    /* section{padding:56px 0} is the old page rhythm. The intro carries its own, so the
+       top is zeroed, but the bottom still has to clear the footer's border -- the baud
+       control was sitting flush against that line. */
+    padding:0 0 var(--ec-gap);
   }
   /* The band needed its own .wrap when it was full-bleed. Nested inside main.wrap it
      just pays the 28px gutter twice, which made the panel 56px narrower than every
@@ -1744,7 +1745,9 @@
 
   #page-test-menu .panel-shell{
     border-radius:30px; box-shadow:none; border:1px solid var(--line);
-    margin-bottom:var(--ec-gap);
+    /* The shortcuts note and the baud control belong to the panel and sit directly
+       under it, so the section gap goes below them, not here. */
+    margin-bottom:0;
   }
   #page-test-menu .panel-bar{ padding:18px 28px; background:#f7faf8; }
   #page-test-menu .panel-body{ padding:48px 40px; min-height:420px; }

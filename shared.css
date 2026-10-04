@@ -1550,14 +1550,18 @@
     color:#f3faf7; margin:0;
   }
   .ec-hero h1 .muted-line{ color:rgba(220,238,231,0.42); }
+  /* The name carries the panel, so it is set at display size rather than as a caption
+     above the text. Reach takes the accent so the product reads as distinct from the
+     company without needing a second line to say so. */
   .ec-hero-brand{
-    display:block; font-family:'IBM Plex Mono',monospace;
-    font-size:12px; letter-spacing:0.16em; text-transform:uppercase;
-    color:rgba(220,238,231,0.5); margin:0 0 22px;
+    display:block; font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(30px, 3.4vw, 46px); font-weight:700;
+    letter-spacing:-0.03em; line-height:1;
+    color:#f3faf7; margin:0 0 20px;
   }
-  .ec-hero-brand b{ color:#8ed8b7; font-weight:600; }
-  .ec-hero-lead{ font-size:27px; line-height:1.25; color:#f3faf7; margin:0 0 18px; max-width:30ch; letter-spacing:-0.015em; }
-  .ec-hero-note{ font-size:17px; line-height:1.6; color:rgba(220,238,231,0.62); margin:0 0 34px; max-width:56ch; }
+  .ec-hero-brand b{ color:#8ed8b7; font-weight:700; }
+  .ec-hero-lead{ font-size:25px; line-height:1.3; font-weight:600; color:#f3faf7; margin:0 0 14px; max-width:30ch; letter-spacing:-0.015em; }
+  .ec-hero-note{ font-size:17.5px; line-height:1.5; font-weight:500; color:rgba(220,238,231,0.78); margin:0 0 32px; max-width:50ch; }
 
   .ec-hero-card{
     position:absolute; right:52px; bottom:52px;
@@ -1680,7 +1684,8 @@
        wrapped line reads as cramped rather than tight. */
     .ec-intro h1{ line-height:1.06; }
     .ec-hero-body{ padding-right:0; }
-    .ec-hero-lead{ font-size:21px; max-width:none; }
+    .ec-hero-brand{ font-size:30px; margin-bottom:14px; }
+    .ec-hero-lead{ font-size:20px; max-width:none; }
     .ec-hero-note{ font-size:15.5px; max-width:none; }
     .ec-hero-card{ position:static; margin-top:32px; }
     .ec-row{ grid-template-columns:1fr 24px; }

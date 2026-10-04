@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03e contact stream";
+const char FIRMWARE_VERSION[] = "2026-10-03f dropout counts";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -1052,6 +1052,11 @@ const unsigned long CONTACT_STREAM_INTERVAL_MS = 250;
 float contactStreamMin = 0;
 float contactStreamMax = 0;
 bool contactStreamSeen = false;
+// A sample that goes fully open or fully pinned carries no impedance, so it never
+// reaches min and max -- which hides the very worst events behind a healthy-looking
+// range. Counted separately so a dropout is visible as a dropout.
+unsigned int contactStreamOpens = 0;
+unsigned int contactStreamPinned = 0;
 unsigned long lastFlexStreamSampleTime = 0;
 const unsigned long FLEX_STREAM_INTERVAL_MS = 60;
 
@@ -1324,6 +1329,8 @@ void loop() {
     } else if (input == "CONTACT_STREAM_START") {
       contactStreaming = true;
       contactStreamSeen = false;
+      contactStreamOpens = 0;
+      contactStreamPinned = 0;
       lastContactStreamSampleTime = millis();
       moduleSwitch(false);
       Serial.println(F("CONTACT_STREAM:started"));
@@ -1381,6 +1388,11 @@ void loop() {
       float amp = readAcAmplitude(CONTACT_AC_HALF_MS, 8);
       float fraction = amp / ADC_MAX_COUNTS;
       float ohms = -1;
+      if (fraction >= 0.999) {
+        contactStreamOpens++;
+      } else if (fraction <= 0.001) {
+        contactStreamPinned++;
+      }
       if (fraction > 0.001 && fraction < 0.999) {
         ohms = FIXED_RESISTOR * fraction / (1.0 - fraction);
         if (!contactStreamSeen) {
@@ -1399,7 +1411,11 @@ void loop() {
       Serial.print(F(","));
       Serial.print(contactStreamSeen ? contactStreamMin : -1, 0);
       Serial.print(F(","));
-      Serial.println(contactStreamSeen ? contactStreamMax : -1, 0);
+      Serial.print(contactStreamSeen ? contactStreamMax : -1, 0);
+      Serial.print(F(","));
+      Serial.print(contactStreamOpens);
+      Serial.print(F(","));
+      Serial.println(contactStreamPinned);
     }
   }
 

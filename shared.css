@@ -1747,19 +1747,11 @@
     from{ opacity:0; transform:translateY(26px); }
     to{ opacity:1; transform:none; }
   }
-  @keyframes ecHeadRule{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
   #page-home .ec-intro h1 .ec-h-line{ animation:ecHeadRise .72s cubic-bezier(.22,1,.36,1) both; }
   #page-home .ec-intro h1 .muted-line{ animation:ecHeadRise .72s cubic-bezier(.22,1,.36,1) .13s both; }
-  #page-home .ec-intro h1::after{
-    content:''; display:block; height:7px; width:132px; margin-top:30px;
-    background:var(--primary); border-radius:100px;
-    transform-origin:left center;
-    animation:ecHeadRule .55s cubic-bezier(.22,1,.36,1) .52s both;
-  }
   @media (prefers-reduced-motion: reduce){
     #page-home .ec-intro h1 .ec-h-line,
-    #page-home .ec-intro h1 .muted-line,
-    #page-home .ec-intro h1::after{ animation:none; }
+    #page-home .ec-intro h1 .muted-line{ animation:none; }
   }
 
   /* The second line reads as the point on every page, so it carries the brand colour

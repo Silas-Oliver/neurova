@@ -25,11 +25,40 @@ What each one needs selected before you press play:
 | Script | Selection |
 |---|---|
 | `scene_setup.py` | nothing |
+| `prep_mesh.py` | the imported mesh (`.obj` only) |
 | `glove_shell.py` | the hand mesh, selected **and** active |
 | `materials.py` | the glove (assigns fabric to whatever is selected) |
 
 Active means last clicked -- light outline rather than dark. With several things
 selected, only the active one counts.
+
+## If your hand is an .obj
+
+Simpler to bring in, but it carries three problems a `.blend` does not, and all
+three fail quietly rather than throwing an error.
+
+**File > Import > Wavefront (.obj).** Then run `prep_mesh.py` with it selected,
+which fixes all three and prints what it found.
+
+**No units.** An `.obj` records numbers with no statement of what they mean.
+Blender reads one unit as one metre, so a hand modelled in centimetres arrives
+100 times too big and one modelled in inches arrives at 48cm. `prep_mesh.py`
+scales the longest axis to 0.19m.
+
+**Normals may point inward.** Shrinkwrap with an offset pushes along the normal,
+so a mesh with inverted normals puts the glove shell *inside* the hand. You get
+a shell that appears to have done nothing. The script recalculates them outward.
+
+**Often triangulated.** Shrinkwrap copes with triangles; subdivision does not. A
+triangulated mesh subdivides into a mess of poles and the shell inherits every
+one. The script counts faces and tells you to drop `SHRINK_LEVELS` to 1 if more
+than 60% are triangles.
+
+**One thing no script can fix: the pose.** An `.obj` is a frozen mesh with no
+rig. If it arrives splayed flat or in a fist, you cannot pose it without rigging
+or sculpting it yourself, both of which are real work. Check the pose before you
+build anything on it -- a `.blend` base mesh is often rigged, which is the one
+genuine advantage it has here.
 
 ## Getting a hand out of the .blend
 
@@ -70,6 +99,7 @@ read 19, and the lighting rig will be inside the model.
 3. **Scale it to life size.** A hand is about 19cm from wrist to fingertip. The
    rig assumes roughly that; everything is positioned in metres.
 4. `scene_setup.py` -- camera, lights, render settings.
+   For an `.obj`, run `prep_mesh.py` on the hand first.
 5. `glove_shell.py` -- with the hand selected, builds the glove over it.
 6. Apply the modifiers, then cut the cuff edge and the electrode holes.
 7. `materials.py` -- with the glove selected, assigns fabric and creates the rest.

@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03i burst";
+const char FIRMWARE_VERSION[] = "2026-10-03j excursions";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -1325,7 +1325,21 @@ void runBurst() {
   unsigned int mid = buckets[2] + buckets[3];
   unsigned int total = good + bad + mid;
   if (total == 0) { Serial.println(F("VERDICT: no samples")); return; }
+  // An excursion matters even when it is rare. A run that went from 2k to 2.7M inside a
+  // second printed the same verdict as one that held 1.1M throughout, because four
+  // samples out of two hundred cleared no percentage threshold. The ratio catches what
+  // the buckets miss: nothing about skin moves three orders of magnitude in under a
+  // second, so a range like that is mechanical make-and-break however briefly it shows.
   Serial.print(F("VERDICT: "));
+  if (seen && maxOhms > minOhms * 20.0) {
+    Serial.println(F("UNSTABLE - range spans a factor of 20 or more."));
+    Serial.print(F("  Contact is making and breaking. "));
+    Serial.print(buckets[0] + buckets[1]);
+    Serial.print(F(" of "));
+    Serial.print(BURST_SAMPLES);
+    Serial.println(F(" samples reached good contact."));
+    return;
+  }
   if (good * 5 >= total * 4) Serial.println(F("steady, good contact"));
   else if (bad * 5 >= total * 4) Serial.println(F("steady, no usable contact"));
   else if (mid * 5 >= total * 4) Serial.println(F("steady, poor contact"));

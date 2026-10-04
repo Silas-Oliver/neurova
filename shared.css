@@ -1725,6 +1725,19 @@
   .ec-why .ec-card-mid .ec-stat{ margin-top:0; }
   .ec-feature-grid .ec-card{ min-height:264px; }
 
+  /* ---- home's heading runs larger than the rest of the site ----
+     Every page now opens on a display heading, which made home look like one more
+     page rather than the front of the site. It is the one that has to stop someone,
+     so it runs to 144px against 118px elsewhere, pulls its leading in to 0.9 so the
+     two lines lock into a single block, and takes the brand green on the second line
+     instead of the grey the other pages use. */
+  #page-home .ec-intro h1{
+    font-size:clamp(44px, 9.5vw, 144px);
+    line-height:0.9;
+    letter-spacing:-0.05em;
+  }
+  #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
+
   /* ---- test menu: the home page's treatment, carried through ----
      The page was a grey full-bleed band holding a 28px heading and a white card with
      4px corners. Everything around it had moved to a white page, display type and
@@ -1770,6 +1783,7 @@
     #page-test-menu .panel-bar{ padding:14px 20px; }
     #page-test-menu .screen-title{ font-size:26px; }
     #page-test-menu .ec-intro-lead{ font-size:16px; margin-top:16px; }
+    #page-home .ec-intro h1{ line-height:1.02; letter-spacing:-0.035em; }
   }
 
   /* ---- 3. rotating band ---- */

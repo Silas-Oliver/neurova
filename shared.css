@@ -1732,17 +1732,33 @@
      two lines lock into a single block, and takes the brand green on the second line
      instead of the grey the other pages use. */
   #page-home .ec-intro h1{
-    font-size:clamp(44px, 9.5vw, 144px);
+    font-size:clamp(42px, 9vw, 136px);
     line-height:0.9;
     letter-spacing:-0.05em;
   }
+
+  /* The product sits inside the sentence, in the noun position This refers to. A photo
+     of the glove goes in here; until there is one the chip carries the trace instead, so
+     the shape and the line breaks are already settled when the photo arrives. */
+  #page-home .ec-h-chip{
+    display:inline-flex; align-items:center; justify-content:center;
+    vertical-align:-0.13em; overflow:hidden;
+    width:clamp(80px, 13.5vw, 206px); height:clamp(36px, 6vw, 90px);
+    border-radius:999px; background:#0f1f1b;
+    margin-right:0.14em;
+  }
+  #page-home .ec-h-chip img{ width:100%; height:100%; object-fit:cover; display:block; }
+  #page-home .ec-h-chip svg{ width:86%; height:56%; color:#8ed8b7; }
   #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
 
   /* Size alone does not catch an eye -- a bigger block of text is still a block of
      text sitting still. These give the heading something to do on arrival: the two
      lines rise in a beat apart so the eye follows the second one down, and the rule
      draws itself afterwards, which is movement in a place nothing else moves. */
-  #page-home .ec-intro h1 span{ display:block; }
+  /* Only the two line spans, not every span inside the heading -- this rule used to
+     match the inline chip as well and knocked it onto a line of its own. */
+  #page-home .ec-intro h1 > .ec-h-line,
+  #page-home .ec-intro h1 > .muted-line{ display:block; }
   @keyframes ecHeadRise{
     from{ opacity:0; transform:translateY(26px); }
     to{ opacity:1; transform:none; }
@@ -1803,7 +1819,8 @@
     #page-test-menu .panel-bar{ padding:14px 20px; }
     #page-test-menu .screen-title{ font-size:26px; }
     #page-test-menu .ec-intro-lead{ font-size:16px; margin-top:16px; }
-    #page-home .ec-intro h1{ line-height:1.02; letter-spacing:-0.035em; }
+    #page-home .ec-intro h1{ line-height:1.06; letter-spacing:-0.035em; }
+    #page-home .ec-h-chip{ vertical-align:-0.16em; }
   }
 
   /* ---- 3. rotating band ---- */

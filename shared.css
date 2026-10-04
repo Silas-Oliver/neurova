@@ -1603,11 +1603,7 @@
   .ec-card{ border-radius:24px; padding:30px; display:flex; flex-direction:column; min-height:300px; position:relative; overflow:hidden; }
   .ec-card h3{ font-size:21px; margin:0; letter-spacing:-0.02em; }
   .ec-card p{ font-size:14.5px; line-height:1.5; margin:10px 0 0; }
-  /* margin-top:auto pushes the figure to the foot of the card, but it collapses to
-     nothing the moment a card has enough content to fill its own height -- which left
-     the repeatability card's paragraph touching its number while the card beside it had
-     80px of air. The padding is the floor that auto cannot take away. */
-  .ec-stat{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:62px; line-height:1; letter-spacing:-0.04em; margin-top:auto; padding-top:20px; }
+  .ec-stat{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:62px; line-height:1; letter-spacing:-0.04em; margin-top:auto; }
   .ec-stat span{ font-size:22px; opacity:0.55; margin-left:4px; }
   .ec-card-light{ background:var(--panel); border:1px solid var(--line); }
   .ec-card-light p{ color:var(--muted); }
@@ -1615,7 +1611,7 @@
   .ec-card-dark p{ color:rgba(220,238,231,0.68); }
   .ec-card-mid{ background:var(--primary); color:var(--primary-ink); justify-content:flex-end; }
   .ec-card-mid p{ color:rgba(244,246,244,0.82); }
-  .ec-bars{ width:100%; height:44px; margin-top:18px; fill:rgba(95,191,143,0.5); }
+  .ec-bars{ width:100%; height:60px; margin-top:22px; fill:rgba(95,191,143,0.5); }
   .ec-card-trace{ background:#13302a; color:#f3faf7; justify-content:flex-end; }
   .ec-card-trace svg{ position:absolute; inset:0 0 auto 0; width:100%; height:58%; color:rgba(95,191,143,0.4); }
   .ec-card-trace .pill{ align-self:flex-start; }

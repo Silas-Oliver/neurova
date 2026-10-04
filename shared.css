@@ -1517,12 +1517,17 @@
   .ec-hero{
     position:relative; overflow:hidden; isolation:isolate;
     background:#0f1f1b; border-radius:30px;
-    margin:26px 0 104px; padding:92px 60px 104px; min-height:520px;
-    display:flex; flex-direction:column; justify-content:center;
+    margin:26px 0 104px; padding:86px 60px 100px; min-height:560px;
+    /* Anchored to the top rather than centred. Centring left the headline floating in
+       the middle of the panel with dead space above it; leading the panel is what makes
+       it read as the heading rather than as a line of text that happens to be large. */
+    display:flex; flex-direction:column; justify-content:flex-start;
   }
-  .ec-hero-trace{ position:absolute; inset:auto 0 0 0; width:100%; height:66%; color:rgba(95,191,143,0.20); z-index:-1; }
+  .ec-hero-trace{ position:absolute; inset:auto 0 -4% 0; width:100%; height:82%; color:rgba(95,191,143,0.17); z-index:-1; }
   .ec-hero-trace polyline{ stroke-dasharray:3000; stroke-dashoffset:3000; animation:traceDraw 8s cubic-bezier(.4,0,.2,1) infinite; }
-  .ec-hero-body{ max-width:960px; }
+  /* The headline runs the full width of the panel; only the supporting line is held to
+     a readable measure. The size difference between the two is the hierarchy. */
+  .ec-hero-body{ max-width:none; }
   /* Scales with the viewport instead of stepping at one breakpoint, so the headline is
      the largest thing on the page at every width rather than only at the designed one. */
   .ec-hero h1{
@@ -1530,7 +1535,8 @@
     line-height:0.98; letter-spacing:-0.045em; font-weight:700;
     color:#f3faf7; margin:0;
   }
-  .ec-hero p{ font-size:19px; color:rgba(220,238,231,0.72); margin:26px 0 36px; max-width:46ch; }
+  .ec-hero h1 .muted-line{ color:rgba(220,238,231,0.42); }
+  .ec-hero p{ font-size:19px; color:rgba(220,238,231,0.72); margin:30px 0 38px; max-width:42ch; }
 
   .ec-hero-card{
     position:absolute; right:52px; bottom:52px;

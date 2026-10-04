@@ -1748,7 +1748,7 @@
     margin-right:0.14em;
   }
   #page-home .ec-h-chip img{ width:100%; height:100%; object-fit:cover; display:block; }
-  #page-home .ec-h-chip svg{ width:86%; height:56%; color:#8ed8b7; }
+  #page-home .ec-h-chip svg{ width:88%; height:76%; color:#8ed8b7; }
   #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
 
   /* Size alone does not catch an eye -- a bigger block of text is still a block of

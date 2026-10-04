@@ -60,7 +60,7 @@
   .status-dot{width:7px; height:7px; border-radius:50%; background:var(--muted); flex:none;}
   .status-dot.on{background:var(--good); box-shadow:0 0 0 3px rgba(63,143,95,0.18);}
 
-  .wrap{max-width:1120px; margin:0 auto; padding:0 28px;}
+  .wrap{max-width:1340px; margin:0 auto; padding:0 28px;}
 
   /* ---------- hero ---------- */
   .hero{padding:64px 0 40px;}
@@ -1201,7 +1201,7 @@
     padding:64px 0;
     margin-bottom:96px;
   }
-  .force-desktop .status-band-inner{ max-width:1120px; margin:0 auto; }
+  .force-desktop .status-band-inner{ max-width:1340px; margin:0 auto; }
   .force-desktop .status-band .scope{
     border:none;
     background:transparent;
@@ -1514,16 +1514,26 @@
   .ec-head-right{ display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
 
   /* 1. hero -------------------------------------------------------- */
+  /* The heading sits on the page, above the panel, rather than inside it. A heading
+     inside a filled box reads as that box's label; outside, it is the page's. */
+  .ec-intro{ padding:52px 0 30px; }
+  .ec-intro h1{
+    font-size:clamp(40px, 7.5vw, 118px);
+    line-height:0.98; letter-spacing:-0.045em; font-weight:700;
+    margin:0; color:var(--ink);
+  }
+  .ec-intro h1 .muted-line{ color:var(--muted); }
+
   .ec-hero{
     position:relative; overflow:hidden; isolation:isolate;
     background:#0f1f1b; border-radius:30px;
-    margin:26px 0 104px; padding:86px 60px 100px; min-height:560px;
+    margin:0 0 104px; padding:60px 60px 72px; min-height:400px;
     /* Anchored to the top rather than centred. Centring left the headline floating in
        the middle of the panel with dead space above it; leading the panel is what makes
        it read as the heading rather than as a line of text that happens to be large. */
-    display:flex; flex-direction:column; justify-content:flex-start;
+    display:flex; flex-direction:column; justify-content:flex-end;
   }
-  .ec-hero-trace{ position:absolute; inset:auto 0 -4% 0; width:100%; height:82%; color:rgba(95,191,143,0.17); z-index:-1; }
+  .ec-hero-trace{ position:absolute; inset:auto 0 0 0; width:100%; height:66%; color:rgba(95,191,143,0.20); z-index:-1; }
   .ec-hero-trace polyline{ stroke-dasharray:3000; stroke-dashoffset:3000; animation:traceDraw 8s cubic-bezier(.4,0,.2,1) infinite; }
   /* The headline runs the full width of the panel; only the supporting line is held to
      a readable measure. The size difference between the two is the hierarchy. */
@@ -1536,7 +1546,7 @@
     color:#f3faf7; margin:0;
   }
   .ec-hero h1 .muted-line{ color:rgba(220,238,231,0.42); }
-  .ec-hero p{ font-size:19px; color:rgba(220,238,231,0.72); margin:30px 0 38px; max-width:42ch; }
+  .ec-hero p{ font-size:21px; color:rgba(220,238,231,0.8); margin:0 0 30px; max-width:44ch; }
 
   .ec-hero-card{
     position:absolute; right:52px; bottom:52px;
@@ -1653,10 +1663,11 @@
   @media (max-width: 1000px){
     .ec-feature-grid, .ec-why, .ec-steps{ grid-template-columns:1fr; }
     .ec-split{ grid-template-columns:1fr; gap:36px; }
-    .ec-hero{ padding:64px 28px 80px; }
+    .ec-intro{ padding:30px 0 20px; }
+    .ec-hero{ padding:40px 28px 56px; min-height:0; }
     /* The headline wraps at phone widths whatever the size, and 0.98 leading on a
        wrapped line reads as cramped rather than tight. */
-    .ec-hero h1{ line-height:1.06; }
+    .ec-intro h1{ line-height:1.06; }
     .ec-hero-card{ position:static; margin-top:32px; }
     .ec-row{ grid-template-columns:1fr 24px; }
     .ec-row span{ grid-column:1 / -1; }

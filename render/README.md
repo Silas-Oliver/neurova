@@ -13,9 +13,21 @@ Blender's own editor, not a terminal:
 1. Open Blender. Click the **Scripting** tab along the top.
 2. In the text editor, **Open** (or Text > Open) and pick the `.py` file.
 3. Press the **play button** at the top right of the editor, or **Alt+P**.
-4. Output and errors appear in the **System Console**. On macOS open it with
-   Window > Toggle System Console before running, or you will not see why a
-   script stopped.
+4. Output and errors appear in the **System Console**, which on macOS does not
+   exist as a menu item -- that is Windows only. To see what a script prints,
+   quit Blender and start it from Terminal instead:
+
+   ```
+   /Applications/Blender.app/Contents/MacOS/Blender
+   ```
+
+   Everything the scripts print then appears in that Terminal window. Without
+   it a script that stops early looks like it did nothing at all.
+
+**Do not paste a script into the Python Console.** The console is the small
+panel that executes one line at a time, and a pasted function body comes back
+as `IndentationError: unexpected indent` on every indented line. Scripts go in
+the Text Editor, which is the large panel in the Scripting workspace.
 
 Each file ends with `if __name__ == "__main__": main()`, which fires when the
 text editor runs it, so there is nothing to call by hand.

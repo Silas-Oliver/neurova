@@ -4,9 +4,11 @@
        uneven without any single value being obviously wrong. */
     --ec-gap:110px;
     --ec-gap-tight:30px;
-    /* A filled panel carries more visual weight than a heading over a grid, so it needs
-       more clearance to stop the next section reading as attached to it. */
-    --ec-gap-panel:132px;
+    /* Panels take a smaller external gap than text sections, not a larger one. A panel
+       already carries 68-92px of its own padding below its content, so the whitespace a
+       reader sees under it is that padding plus this gap. Matching the section rhythm
+       here stacked them and left the next heading adrift. */
+    --ec-gap-panel:72px;
 
     --bg:#f4f6f4;
     --panel:#ffffff;
@@ -1691,7 +1693,7 @@
   @media (max-width: 1000px){
     /* 110px between sections is a desktop figure. On a phone it reads as the page
        having ended. */
-    :root{ --ec-gap:64px; --ec-gap-tight:20px; --ec-gap-panel:76px; }
+    :root{ --ec-gap:64px; --ec-gap-tight:20px; --ec-gap-panel:44px; }
     .ec-feature-grid, .ec-why, .ec-steps{ grid-template-columns:1fr; }
     .ec-split{ grid-template-columns:1fr; gap:36px; }
     .ec-intro{ padding:30px 0 var(--ec-gap-tight); }

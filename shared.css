@@ -1,4 +1,10 @@
   :root{
+    /* One vertical rhythm for the home page. Sections were mixing 104px and 110px, set
+       in two different ways -- padding on some, margin on others -- so the gaps looked
+       uneven without any single value being obviously wrong. */
+    --ec-gap:110px;
+    --ec-gap-tight:30px;
+
     --bg:#f4f6f4;
     --panel:#ffffff;
     --ink:#1c2b27;
@@ -1506,7 +1512,7 @@
      took out.
      ================================================================== */
 
-  .ec-sec{ padding:0 0 110px; }
+  .ec-sec{ padding:0 0 var(--ec-gap); }
   .ec-head{ margin-bottom:44px; }
   .ec-head h2{ font-size:46px; line-height:1.08; letter-spacing:-0.035em; margin:0; }
   .ec-head-center{ text-align:center; }
@@ -1516,7 +1522,7 @@
   /* 1. hero -------------------------------------------------------- */
   /* The heading sits on the page, above the panel, rather than inside it. A heading
      inside a filled box reads as that box's label; outside, it is the page's. */
-  .ec-intro{ padding:52px 0 30px; }
+  .ec-intro{ padding:52px 0 var(--ec-gap-tight); }
   .ec-intro h1{
     font-size:clamp(40px, 7.5vw, 118px);
     line-height:0.98; letter-spacing:-0.045em; font-weight:700;
@@ -1527,7 +1533,7 @@
   .ec-hero{
     position:relative; overflow:hidden; isolation:isolate;
     background:#0f1f1b; border-radius:30px;
-    margin:0 0 104px; padding:64px 60px 68px; min-height:420px;
+    margin:0 0 var(--ec-gap); padding:64px 60px 68px; min-height:420px;
     /* Anchored to the top rather than centred. Centring left the headline floating in
        the middle of the panel with dead space above it; leading the panel is what makes
        it read as the heading rather than as a line of text that happens to be large. */
@@ -1626,7 +1632,7 @@
   /* 5. showcase ---------------------------------------------------- */
   .ec-show{
     background:var(--primary); color:var(--primary-ink);
-    border-radius:30px; padding:92px 60px; margin:0 0 110px; text-align:center;
+    border-radius:30px; padding:92px 60px; margin:0 0 var(--ec-gap); text-align:center;
   }
   .ec-show h2{ font-size:52px; line-height:1.06; letter-spacing:-0.035em; margin:0; }
   .ec-show p{ font-size:17px; color:rgba(244,246,244,0.82); margin:18px auto 0; max-width:52ch; }
@@ -1676,9 +1682,15 @@
   }
 
   @media (max-width: 1000px){
+    /* 110px between sections is a desktop figure. On a phone it reads as the page
+       having ended. */
+    :root{ --ec-gap:64px; --ec-gap-tight:20px; }
     .ec-feature-grid, .ec-why, .ec-steps{ grid-template-columns:1fr; }
     .ec-split{ grid-template-columns:1fr; gap:36px; }
-    .ec-intro{ padding:30px 0 20px; }
+    .ec-intro{ padding:30px 0 var(--ec-gap-tight); }
+    .ec-show{ padding:56px 28px; }
+    .ec-cta{ padding:60px 28px 0; }
+    .ec-head{ margin-bottom:28px; }
     .ec-hero{ padding:40px 28px 56px; min-height:0; }
     /* The headline wraps at phone widths whatever the size, and 0.98 leading on a
        wrapped line reads as cramped rather than tight. */

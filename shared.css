@@ -4,6 +4,9 @@
        uneven without any single value being obviously wrong. */
     --ec-gap:110px;
     --ec-gap-tight:30px;
+    /* A filled panel carries more visual weight than a heading over a grid, so it needs
+       more clearance to stop the next section reading as attached to it. */
+    --ec-gap-panel:132px;
 
     --bg:#f4f6f4;
     --panel:#ffffff;
@@ -1533,7 +1536,7 @@
   .ec-hero{
     position:relative; overflow:hidden; isolation:isolate;
     background:#0f1f1b; border-radius:30px;
-    margin:0 0 var(--ec-gap); padding:64px 60px 68px; min-height:420px;
+    margin:0 0 var(--ec-gap-panel); padding:64px 60px 68px; min-height:420px;
     /* Anchored to the top rather than centred. Centring left the headline floating in
        the middle of the panel with dead space above it; leading the panel is what makes
        it read as the heading rather than as a line of text that happens to be large. */
@@ -1598,7 +1601,11 @@
   .ec-card{ border-radius:24px; padding:30px; display:flex; flex-direction:column; min-height:300px; position:relative; overflow:hidden; }
   .ec-card h3{ font-size:21px; margin:0; letter-spacing:-0.02em; }
   .ec-card p{ font-size:14.5px; line-height:1.5; margin:10px 0 0; }
-  .ec-stat{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:62px; line-height:1; letter-spacing:-0.04em; margin-top:auto; }
+  /* margin-top:auto pushes the figure to the foot of the card, but it collapses to
+     nothing the moment a card has enough content to fill its own height -- which left
+     the repeatability card's paragraph touching its number while the card beside it had
+     80px of air. The padding is the floor that auto cannot take away. */
+  .ec-stat{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:62px; line-height:1; letter-spacing:-0.04em; margin-top:auto; padding-top:20px; }
   .ec-stat span{ font-size:22px; opacity:0.55; margin-left:4px; }
   .ec-card-light{ background:var(--panel); border:1px solid var(--line); }
   .ec-card-light p{ color:var(--muted); }
@@ -1606,7 +1613,7 @@
   .ec-card-dark p{ color:rgba(220,238,231,0.68); }
   .ec-card-mid{ background:var(--primary); color:var(--primary-ink); justify-content:flex-end; }
   .ec-card-mid p{ color:rgba(244,246,244,0.82); }
-  .ec-bars{ width:100%; height:60px; margin-top:22px; fill:rgba(95,191,143,0.5); }
+  .ec-bars{ width:100%; height:44px; margin-top:18px; fill:rgba(95,191,143,0.5); }
   .ec-card-trace{ background:#13302a; color:#f3faf7; justify-content:flex-end; }
   .ec-card-trace svg{ position:absolute; inset:0 0 auto 0; width:100%; height:58%; color:rgba(95,191,143,0.4); }
   .ec-card-trace .pill{ align-self:flex-start; }
@@ -1632,7 +1639,7 @@
   /* 5. showcase ---------------------------------------------------- */
   .ec-show{
     background:var(--primary); color:var(--primary-ink);
-    border-radius:30px; padding:92px 60px; margin:0 0 var(--ec-gap); text-align:center;
+    border-radius:30px; padding:92px 60px; margin:0 0 var(--ec-gap-panel); text-align:center;
   }
   .ec-show h2{ font-size:52px; line-height:1.06; letter-spacing:-0.035em; margin:0; }
   .ec-show p{ font-size:17px; color:rgba(244,246,244,0.82); margin:18px auto 0; max-width:52ch; }
@@ -1684,7 +1691,7 @@
   @media (max-width: 1000px){
     /* 110px between sections is a desktop figure. On a phone it reads as the page
        having ended. */
-    :root{ --ec-gap:64px; --ec-gap-tight:20px; }
+    :root{ --ec-gap:64px; --ec-gap-tight:20px; --ec-gap-panel:76px; }
     .ec-feature-grid, .ec-why, .ec-steps{ grid-template-columns:1fr; }
     .ec-split{ grid-template-columns:1fr; gap:36px; }
     .ec-intro{ padding:30px 0 var(--ec-gap-tight); }

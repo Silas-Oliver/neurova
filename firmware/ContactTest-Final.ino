@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03g low impedance";
+const char FIRMWARE_VERSION[] = "2026-10-03h relative spread";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -679,7 +679,20 @@ void runCalibration() {
   // hydrates the skin underneath it and the interface drops over minutes, so the answer
   // is to wait. Readings jumping around instead mean the electrode is not held still.
   bool settling = (steps > 0 && descents * 10 >= steps * 7);
-  if (spread > CALIB_MAX_SPREAD_FRAC) {
+
+  // Spread is relative, which stops meaning anything once the readings are small. At
+  // 1500 ohms a single ADC count is worth about 100, so a two-count wobble is a 27%
+  // spread -- quantization alone fails the gate while the contact is in fact excellent.
+  // What matters is whether the disagreement could change an outcome, and the baseline
+  // reaches the outcome through one path only: the threshold. Below the point where the
+  // multiple overtakes the flat floor, every sample in the run yields the same threshold,
+  // so their disagreement cannot change a single verdict and is not worth failing over.
+  bool spreadIsMoot = (maxOhms * GOOD_CONTACT_MULTIPLE <= MIN_GOOD_CONTACT_THRESHOLD);
+  if (spread > CALIB_MAX_SPREAD_FRAC && spreadIsMoot) {
+    Serial.println(F("Spread is quantization at this impedance, not disagreement."));
+    Serial.println(F("Every sample gives the same threshold, so it changes nothing."));
+  }
+  if (spread > CALIB_MAX_SPREAD_FRAC && !spreadIsMoot) {
     if (settling) {
       Serial.println(F("Impedance is still falling, so the electrodes are settling."));
       Serial.println(F("Leave the glove on a few minutes, then calibrate again."));

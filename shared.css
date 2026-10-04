@@ -1527,17 +1527,21 @@
   .ec-hero{
     position:relative; overflow:hidden; isolation:isolate;
     background:#0f1f1b; border-radius:30px;
-    margin:0 0 104px; padding:60px 60px 72px; min-height:400px;
+    margin:0 0 104px; padding:64px 60px 68px; min-height:420px;
     /* Anchored to the top rather than centred. Centring left the headline floating in
        the middle of the panel with dead space above it; leading the panel is what makes
        it read as the heading rather than as a line of text that happens to be large. */
-    display:flex; flex-direction:column; justify-content:flex-end;
+    display:flex; flex-direction:column; justify-content:center;
   }
   .ec-hero-trace{ position:absolute; inset:auto 0 0 0; width:100%; height:66%; color:rgba(95,191,143,0.20); z-index:-1; }
   .ec-hero-trace polyline{ stroke-dasharray:3000; stroke-dashoffset:3000; animation:traceDraw 8s cubic-bezier(.4,0,.2,1) infinite; }
   /* The headline runs the full width of the panel; only the supporting line is held to
      a readable measure. The size difference between the two is the hierarchy. */
-  .ec-hero-body{ max-width:none; }
+  /* The reading card floats bottom-right, so the text column has to stop short of it.
+     Reserving the space here rather than capping each paragraph means it holds at every
+     width between the mobile breakpoint and full size, where the panel is narrow enough
+     for the note to have run underneath the card. */
+  .ec-hero-body{ max-width:none; padding-right:300px; }
   /* Scales with the viewport instead of stepping at one breakpoint, so the headline is
      the largest thing on the page at every width rather than only at the designed one. */
   .ec-hero h1{
@@ -1546,7 +1550,14 @@
     color:#f3faf7; margin:0;
   }
   .ec-hero h1 .muted-line{ color:rgba(220,238,231,0.42); }
-  .ec-hero p{ font-size:21px; color:rgba(220,238,231,0.8); margin:0 0 30px; max-width:44ch; }
+  .ec-hero-brand{
+    display:block; font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:0.16em; text-transform:uppercase;
+    color:rgba(220,238,231,0.5); margin:0 0 22px;
+  }
+  .ec-hero-brand b{ color:#8ed8b7; font-weight:600; }
+  .ec-hero-lead{ font-size:27px; line-height:1.25; color:#f3faf7; margin:0 0 18px; max-width:30ch; letter-spacing:-0.015em; }
+  .ec-hero-note{ font-size:17px; line-height:1.6; color:rgba(220,238,231,0.62); margin:0 0 34px; max-width:56ch; }
 
   .ec-hero-card{
     position:absolute; right:52px; bottom:52px;
@@ -1668,6 +1679,9 @@
     /* The headline wraps at phone widths whatever the size, and 0.98 leading on a
        wrapped line reads as cramped rather than tight. */
     .ec-intro h1{ line-height:1.06; }
+    .ec-hero-body{ padding-right:0; }
+    .ec-hero-lead{ font-size:21px; max-width:none; }
+    .ec-hero-note{ font-size:15.5px; max-width:none; }
     .ec-hero-card{ position:static; margin-top:32px; }
     .ec-row{ grid-template-columns:1fr 24px; }
     .ec-row span{ grid-column:1 / -1; }

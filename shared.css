@@ -1738,6 +1738,34 @@
   }
   #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
 
+  /* Size alone does not catch an eye -- a bigger block of text is still a block of
+     text sitting still. These give the heading something to do on arrival: the two
+     lines rise in a beat apart so the eye follows the second one down, and the rule
+     draws itself afterwards, which is movement in a place nothing else moves. */
+  #page-home .ec-intro h1 span{ display:block; }
+  @keyframes ecHeadRise{
+    from{ opacity:0; transform:translateY(26px); }
+    to{ opacity:1; transform:none; }
+  }
+  @keyframes ecHeadRule{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+  #page-home .ec-intro h1 .ec-h-line{ animation:ecHeadRise .72s cubic-bezier(.22,1,.36,1) both; }
+  #page-home .ec-intro h1 .muted-line{ animation:ecHeadRise .72s cubic-bezier(.22,1,.36,1) .13s both; }
+  #page-home .ec-intro h1::after{
+    content:''; display:block; height:7px; width:132px; margin-top:30px;
+    background:var(--primary); border-radius:100px;
+    transform-origin:left center;
+    animation:ecHeadRule .55s cubic-bezier(.22,1,.36,1) .52s both;
+  }
+  @media (prefers-reduced-motion: reduce){
+    #page-home .ec-intro h1 .ec-h-line,
+    #page-home .ec-intro h1 .muted-line,
+    #page-home .ec-intro h1::after{ animation:none; }
+  }
+
+  /* The second line reads as the point on every page, so it carries the brand colour
+     rather than the grey it had, which only said "less important than the line above". */
+  #page-test-menu .ec-intro h1 .muted-line{ color:var(--primary); }
+
   /* ---- test menu: the home page's treatment, carried through ----
      The page was a grey full-bleed band holding a 28px heading and a white card with
      4px corners. Everything around it had moved to a white page, display type and

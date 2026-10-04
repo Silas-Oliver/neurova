@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03f dropout counts";
+const char FIRMWARE_VERSION[] = "2026-10-03g low impedance";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -227,6 +227,15 @@ const int CALIB_MIN_VALID_SAMPLES = 6;
 // Baseline is your best contact, so higher resistance means worse contact.
 const float GOOD_CONTACT_MULTIPLE = 1.5;
 
+// A multiple of the baseline is the right rule across the middle of the range and the
+// wrong one at the bottom. Loading the electrode properly brought contact to 1.5k, where
+// 1.5x sets the pass mark at 2.2k and would call 5k poor -- better contact than this rig
+// ever managed before today. The amplifier does not care about the difference: its input
+// impedance is megohms, so anything in the low tens of kilohms is equally good to it.
+// Contact passes if it beats either test, so a very good baseline cannot make the bar
+// stricter than the hardware actually needs.
+const float MIN_GOOD_CONTACT_THRESHOLD = 20000.0;
+
 // Sanity bounds for a baseline arriving over serial, so a typo or a garbled line can't
 // silently install a nonsense reference that makes every later test meaningless.
 // Ten samples that disagree by more than this much are noise, not a measurement. Good
@@ -243,7 +252,11 @@ const float CALIB_MAX_SPREAD_FRAC = 0.25;
 // glove is 38k, hard finger pressure 64k, and dry electrodes at 500 Hz top out near 267k.
 const float MAX_GOOD_CONTACT_BASELINE = 400000.0;
 
-const float MIN_PLAUSIBLE_BASELINE = 1000.0;        // 1 kilohm
+// Low enough to allow real skin, high enough to reject two electrodes touching each
+// other. Settled contact reads about 1.5k and a short reads under 150, so this sits with
+// roughly 3x of margin on both sides. It was 1k, set when nothing had ever measured
+// below 20k and a reading this low looked like a fault rather than a success.
+const float MIN_PLAUSIBLE_BASELINE = 500.0;
 const float MAX_PLAUSIBLE_BASELINE = 20000000.0;    // 20 megohm
 
 // EEPROM lets the baseline survive the automatic reset that happens every time a serial
@@ -564,11 +577,16 @@ void contactCircuitOff() {
   pinMode(CONTACT_SINK_PIN, INPUT);
 }
 
+float goodContactThreshold() {
+  float scaled = baselineResistance * GOOD_CONTACT_MULTIPLE;
+  return (scaled > MIN_GOOD_CONTACT_THRESHOLD) ? scaled : MIN_GOOD_CONTACT_THRESHOLD;
+}
+
 ContactState classifyContact(float rawReading, float &resistanceOut) {
   if (!readResistance(rawReading, resistanceOut)) {
     return NO_CONTACT;
   }
-  float threshold = isCalibrated ? (baselineResistance * GOOD_CONTACT_MULTIPLE)
+  float threshold = isCalibrated ? goodContactThreshold()
                                  : (FIXED_RESISTOR * 3.0);  // fallback if TEST runs uncalibrated
   return (resistanceOut <= threshold) ? GOOD_CONTACT : POOR_CONTACT;
 }
@@ -752,7 +770,7 @@ void runContactTest() {
     if (!measureContactImpedance(resistance)) {
       state = NO_CONTACT;
     } else {
-      float threshold = isCalibrated ? (baselineResistance * GOOD_CONTACT_MULTIPLE)
+      float threshold = isCalibrated ? goodContactThreshold()
                                      : (FIXED_RESISTOR * 3.0);
       state = (resistance <= threshold) ? GOOD_CONTACT : POOR_CONTACT;
     }

@@ -1725,6 +1725,50 @@
   .ec-why .ec-card-mid .ec-stat{ margin-top:0; }
   .ec-feature-grid .ec-card{ min-height:264px; }
 
+  /* ---- test menu: the home page's treatment, carried through ----
+     The page was a grey full-bleed band holding a 28px heading and a white card with
+     4px corners. Everything around it had moved to a white page, display type and
+     30px radii, so it read as a different site rather than a different page. */
+  #page-test-menu .panel-section{
+    background:transparent; border-top:none; border-bottom:none;
+    /* section{padding:56px 0} is the old page rhythm. The intro carries its own, and
+       stacking the two put this page's heading 56px lower than the home page's. */
+    padding:0;
+  }
+  /* The band needed its own .wrap when it was full-bleed. Nested inside main.wrap it
+     just pays the 28px gutter twice, which made the panel 56px narrower than every
+     other block on the site. */
+  #page-test-menu .panel-section > .wrap{ max-width:none; padding:0; }
+  #page-test-menu .ec-intro{ padding:52px 0 var(--ec-gap-tight); }
+  .ec-intro-lead{ font-size:19px; line-height:1.55; color:var(--muted); margin:24px 0 0; max-width:52ch; }
+
+  #page-test-menu .panel-shell{
+    border-radius:30px; box-shadow:none; border:1px solid var(--line);
+    margin-bottom:var(--ec-gap);
+  }
+  #page-test-menu .panel-bar{ padding:18px 28px; background:#f7faf8; }
+  #page-test-menu .panel-body{ padding:48px 40px; min-height:420px; }
+  #page-test-menu .screen-title{ font-size:34px; letter-spacing:-0.03em; margin-bottom:12px; }
+  #page-test-menu .screen-sub{ font-size:16px; line-height:1.6; max-width:56ch; margin-bottom:34px; }
+
+  /* The options are the page's cards, so they take the card radius and padding rather
+     than the 4px of the old form-control look. */
+  #page-test-menu .menu-options{ gap:18px; }
+  #page-test-menu .menu-option{
+    border-radius:22px; padding:24px 26px; border:1px solid var(--line);
+  }
+  #page-test-menu .menu-option:hover:not(:disabled){ border-color:var(--primary); background:#fbfcfb; }
+  #page-test-menu .menu-option h3{ font-size:19px; letter-spacing:-0.02em; margin-bottom:8px; }
+  #page-test-menu .menu-option p{ font-size:14px; }
+  #page-test-menu .menu-step{ font-size:10.5px; letter-spacing:0.12em; margin-bottom:10px; }
+
+  @media (max-width: 1000px){
+    #page-test-menu .panel-body{ padding:28px 22px; min-height:0; }
+    #page-test-menu .panel-bar{ padding:14px 20px; }
+    #page-test-menu .screen-title{ font-size:26px; }
+    #page-test-menu .ec-intro-lead{ font-size:16px; margin-top:16px; }
+  }
+
   /* ---- 3. rotating band ---- */
   .ec-show-body{ transition:opacity .22s ease; opacity:1; }
   .ec-show-body.fading{ opacity:0; }

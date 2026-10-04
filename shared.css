@@ -1573,11 +1573,15 @@
   .ec-split-left h2{ font-size:46px; line-height:1.08; letter-spacing:-0.035em; margin:0 0 28px; }
   .ec-row{
     display:grid; grid-template-columns:200px 1fr 28px; align-items:center; gap:18px;
-    padding:24px 4px; border-top:1px solid var(--line); text-decoration:none; color:inherit;
-    transition:padding-left .2s ease;
+    /* The slide on hover has to keep total horizontal padding constant. Adding 12px to
+       one side alone takes it out of the 1fr track, and losing 12px there was enough to
+       wrap the last word of a description onto a second line and jump the row height. */
+    padding:24px 16px 24px 4px;
+    border-top:1px solid var(--line); text-decoration:none; color:inherit;
+    transition:padding-left .2s ease, padding-right .2s ease;
   }
   .ec-row:last-child{ border-bottom:1px solid var(--line); }
-  .ec-row:hover{ padding-left:12px; }
+  .ec-row:hover{ padding-left:16px; padding-right:4px; }
   .ec-row b{ font-size:17px; font-weight:600; }
   .ec-row span{ font-size:14.5px; color:var(--muted); }
   .ec-row i{ font-style:normal; color:var(--muted); justify-self:end; }

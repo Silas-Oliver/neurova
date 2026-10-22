@@ -57,7 +57,7 @@
 // running the build I just edited?" without having to infer it from behaviour — the
 // Arduino IDE does not reload a sketch that changed on disk, so an upload can silently
 // flash stale code from an editor window opened earlier.
-const char FIRMWARE_VERSION[] = "2026-10-03j excursions";
+const char FIRMWARE_VERSION[] = "2026-10-21a check covers flex";
 
 const int CONTACT_PIN = A0;
 const int CONTACT_DRIVE_PIN = 2;   // top of the divider — HIGH to measure, INPUT to disconnect
@@ -291,6 +291,7 @@ const int EEPROM_ADDR_CHECK_MAGIC = 28;
 const int EEPROM_ADDR_CHECK_RAIL = 32;
 const int EEPROM_ADDR_CHECK_CONTACT = 36;
 const int EEPROM_ADDR_CHECK_EMG = 40;
+const int EEPROM_ADDR_CHECK_FLEX = 44;
 const unsigned long EEPROM_CHECK_MAGIC = 0x4E524348UL;  // "NRCH"
 // Deviations beyond these are worth pointing at. Generous on the rail, which is a supply
 // and should barely move; looser on contact, which legitimately varies with skin.
@@ -973,7 +974,7 @@ void runRailReading(){
 
 // ---------------- rig check ----------------
 
-float checkRefRail = 0, checkRefContact = 0, checkRefEmg = 0;
+float checkRefRail = 0, checkRefContact = 0, checkRefEmg = 0, checkRefFlex = 0;
 bool checkRefValid = false;
 
 void loadCheckReference(){
@@ -983,7 +984,9 @@ void loadCheckReference(){
   EEPROM.get(EEPROM_ADDR_CHECK_RAIL, checkRefRail);
   EEPROM.get(EEPROM_ADDR_CHECK_CONTACT, checkRefContact);
   EEPROM.get(EEPROM_ADDR_CHECK_EMG, checkRefEmg);
+  EEPROM.get(EEPROM_ADDR_CHECK_FLEX, checkRefFlex);
   if(isnan(checkRefRail) || isnan(checkRefContact) || isnan(checkRefEmg)) return;
+  if(isnan(checkRefFlex)) checkRefFlex = 0;   // written by a build before flex joined CHECK
   checkRefValid = true;
 }
 
@@ -1036,6 +1039,13 @@ void runCheck(bool save){
   if(checkRefValid && !save) printDelta(contact, checkRefContact, 0, CHECK_CONTACT_TOLERANCE_FRAC);
   else Serial.println();
 
+  float flex = readFlexRaw();
+  Serial.print(F("Flex     "));
+  Serial.print(flex, 1);
+  Serial.print(F(" counts"));
+  if(checkRefValid && checkRefFlex > 0 && !save) printDelta(flex, checkRefFlex, 0, CHECK_CONTACT_TOLERANCE_FRAC);
+  else Serial.println();
+
   float emgMean; int emgSpread;
   measureEmgIdle(emgMean, emgSpread);
   Serial.print(F("EMG idle "));
@@ -1046,12 +1056,13 @@ void runCheck(bool save){
   else Serial.println();
 
   if(save){
-    checkRefRail = rail; checkRefContact = contact; checkRefEmg = emgMean;
+    checkRefRail = rail; checkRefContact = contact; checkRefEmg = emgMean; checkRefFlex = flex;
     checkRefValid = true;
     EEPROM.put(EEPROM_ADDR_CHECK_MAGIC, EEPROM_CHECK_MAGIC);
     EEPROM.put(EEPROM_ADDR_CHECK_RAIL, rail);
     EEPROM.put(EEPROM_ADDR_CHECK_CONTACT, contact);
     EEPROM.put(EEPROM_ADDR_CHECK_EMG, emgMean);
+    EEPROM.put(EEPROM_ADDR_CHECK_FLEX, flex);
     Serial.println(F("Saved as the reference for this rig."));
   } else if(!checkRefValid){
     Serial.println(F("No reference saved. Run CHECK:SAVE while it is working."));

@@ -98,30 +98,41 @@ measuring it.
 
 ### 1b -- the supply
 
-Use **two 3-cell AA holders**, ±4.5 V. Not 9 V batteries, for a reason that
-matters: this probe divides by two against a 5 V ADC, so it can read up to
-10 V safely. Two 9 Vs in series is 18 V, which arrives at `A3` as 9 V and
-damages the pin. At ±4.5 V both the half and the whole are inside the probe's
-range, so you can check the balance. AAs are also likelier to be in the house.
+Two batteries of equal voltage in series, centre tap to ground. Two 9 V cells
+give ±9 V, two 3-cell AA holders give ±4.5 V. Either clears the sensor's
+±3.5 V minimum, and 9 V leaves far more headroom as the cells deplete.
 
-**1.8** Pack A red -> row 1. Pack A black -> row 5.
+**Never probe across both batteries at once.** This probe divides by two
+against a 5 V ADC, so it reads to 10 V safely. Two 9 Vs in series is 18 V,
+which arrives at `A3` as 9 V and damages the pin. Measure one battery at a
+time -- the steps below never span more than one.
 
-**1.9** Pack B red -> row 5. Pack B black -> row 9.
+**1.8** Battery A red -> row 1. Battery A black -> row 5.
 
-Row 5 is now the centre tap: the junction of the two packs.
+**1.9** Battery B red -> row 5. Battery B black -> row 9.
 
-**1.10** Jumper row 5 -> ground rail. That makes the centre tap your zero, and
-rows 1 and 9 become +4.5 V and -4.5 V with respect to it.
+Row 5 is now the centre tap: the junction of the two batteries.
 
-**1.11** Probe row 1. Expect **+4.5 V**, or above +3.5 V at minimum.
+**1.10** Jumper row 5 -> ground rail. Rows 1 and 9 become +9 V and -9 V with
+respect to it.
 
-**1.12** Check the balance, since the probe cannot read a negative voltage.
-Move the ground-rail jumper from row 5 to row 9 temporarily and probe row 1
-again. It should read **twice** the figure from 1.11 -- about 9 V. If it does,
-the two halves are equal and the negative rail is as good as the positive one.
-Put the jumper back on row 5.
+**1.11** Probe row 1. Expect **+9 V**, and above +3.5 V at minimum. That is
+battery A.
 
-**1.13** `CHECK:SAVE`. This is the first commit.
+**Do not probe row 9 while the ground jumper is on row 5.** It sits at -9 V,
+and this probe cannot read a negative voltage -- it drives `A3` below ground
+and into the clamp diodes.
+
+**1.12** Measure battery B on its own. Move the ground-rail jumper from row 5
+to **row 9**, then probe **row 5**. Expect **+9 V** again. That is battery B,
+measured the same safe way as A, with nothing negative anywhere and never more
+than one battery in the path.
+
+Both readings within about 10% of each other means the halves are balanced. A
+single tired cell would show here and nowhere else.
+
+**1.13** Move the ground jumper back to row 5. `CHECK:SAVE`. This is the first
+commit.
 
 **Pass:** probe validated at 4.99 V, +4.5 V on row 1, about 9 V across the
 whole pack, nothing connected to the supply yet.

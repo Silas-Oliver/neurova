@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261113-28">
+<link rel="stylesheet" href="shared.css?v=20261113-29">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -605,37 +605,56 @@
 
 <div class="page" data-page="contact" id="page-contact">
   <section>
-    <div class="wrap" style="padding-top:56px; padding-bottom:56px;">
+    <div class="wrap" style="padding-top:56px; padding-bottom:72px;">
       <div class="section-head">
         <h2>Contact</h2>
         <p>Questions about the glove, the measurements, or the project itself. Messages come straight to me and I answer them myself.</p>
       </div>
 
-      <form id="contactForm" class="contact-form" novalidate>
-        <div class="form-group">
-          <label for="contactName">Name</label>
-          <input type="text" id="contactName" autocomplete="name" maxlength="80" required>
-        </div>
-        <div class="form-group">
-          <label for="contactEmail">Email</label>
-          <input type="email" id="contactEmail" autocomplete="email" maxlength="120" placeholder="Where a reply should go" required>
-        </div>
-        <div class="form-group">
-          <label for="contactMessage">Message</label>
-          <textarea id="contactMessage" rows="7" maxlength="2000" required></textarea>
-        </div>
-        <div class="contact-hp" aria-hidden="true">
-          <label for="contactCompany">Company</label>
-          <input type="text" id="contactCompany" tabindex="-1" autocomplete="off">
-        </div>
-        <div id="contactStatus" class="contact-status" role="status" aria-live="polite"></div>
-        <div class="auth-actions">
-          <button type="submit" class="btn btn-primary" id="contactSubmit">Send message</button>
-        </div>
-      </form>
+      <div class="contact-grid">
+        <form id="contactForm" class="contact-form" novalidate>
+          <div class="form-group">
+            <label for="contactName">Name</label>
+            <input type="text" id="contactName" autocomplete="name" maxlength="80" required>
+          </div>
+          <div class="form-group">
+            <label for="contactEmail">Email</label>
+            <input type="email" id="contactEmail" autocomplete="email" maxlength="120" placeholder="Where a reply should go" required>
+          </div>
+          <div class="form-group">
+            <label for="contactMessage">Message</label>
+            <textarea id="contactMessage" rows="8" maxlength="2000" required></textarea>
+          </div>
+          <div class="contact-hp" aria-hidden="true">
+            <label for="contactCompany">Company</label>
+            <input type="text" id="contactCompany" tabindex="-1" autocomplete="off">
+          </div>
+          <div id="contactStatus" class="contact-status" role="status" aria-live="polite"></div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary" id="contactSubmit">Send message</button>
+          </div>
+        </form>
 
-      <div class="data-note" style="margin-top:28px; max-width:560px;">
-        Your name, your email address and your message are stored in this project's database so the message can be read and replied to. Nothing else is recorded, and none of it is shared.
+        <aside class="contact-aside">
+          <svg class="contact-aside-trace" viewBox="0 0 600 160" preserveAspectRatio="none" aria-hidden="true">
+            <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,100 70,100 86,58 102,140 118,100 230,100 246,42 262,150 278,100 400,100 416,70 432,128 448,100 600,100"/>
+          </svg>
+          <div class="contact-aside-kicker">What happens next</div>
+          <ul class="contact-aside-list">
+            <li>
+              <b>It reaches me directly</b>
+              <span>Messages land in my inbox and in the project's own database. There is no team and no ticket queue.</span>
+            </li>
+            <li>
+              <b>Your address is only used to reply</b>
+              <span>It is never published, shared, or added to a list.</span>
+            </li>
+            <li>
+              <b>No account needed</b>
+              <span>You don't have to sign in, and nothing you write here is shown anywhere on the site.</span>
+            </li>
+          </ul>
+        </aside>
       </div>
     </div>
   </section>
@@ -688,7 +707,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261113-28"></script>
+<script src="shared.js?v=20261113-29"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

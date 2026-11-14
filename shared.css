@@ -718,7 +718,43 @@
   .auth-actions{display:flex; gap:10px; margin-top:6px; flex-wrap:wrap;}
 
   /* ---- contact form ---- */
-  .contact-form{max-width:560px;}
+  /* Two columns rather than one: a 560px form on a 1340px page left the right half of
+     the screen empty, which read as an unfinished page rather than a spare one. The
+     panel carries the answers people would otherwise have to ask for, and borrows the
+     home hero's dark treatment so it reads as the same site. */
+  .contact-grid{
+    display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+    gap:30px; align-items:start;
+  }
+  .contact-form{max-width:none;}
+  .contact-aside{
+    position:relative; overflow:hidden; isolation:isolate;
+    background:#0f1f1b; border-radius:22px;
+    /* The deep bottom padding is what the trace lives in. At 34px the spikes ran up
+       through the last paragraph -- legible, since the text sits above it, but the
+       lines crossed the words and made them harder to read. */
+    padding:30px 32px 58px; color:#f3faf7;
+  }
+  /* Same trace as the hero, fainter and confined to the band below the text, so the
+     panel is recognisably part of the same family without competing with it. */
+  .contact-aside-trace{
+    position:absolute; inset:auto 0 0 0; width:100%; height:30%;
+    color:rgba(95,191,143,0.15); z-index:-1;
+  }
+  .contact-aside-kicker{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; color:#8ed8b7; margin-bottom:20px;
+  }
+  .contact-aside-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:20px;}
+  .contact-aside-list li{display:flex; flex-direction:column; gap:5px;}
+  .contact-aside-list b{font-size:14.5px; font-weight:600; color:#f3faf7; letter-spacing:-0.01em;}
+  .contact-aside-list span{font-size:13.5px; line-height:1.55; color:rgba(220,238,231,0.72);}
+  /* The form comes first in the DOM, so stacking puts it above the panel on a phone --
+     the thing someone came to use, before the reassurance about using it. */
+  @media (max-width:880px){
+    .contact-grid{grid-template-columns:1fr; gap:22px;}
+    .contact-aside{padding:26px 24px 28px; border-radius:16px;}
+  }
   /* A honeypot, not a real field: offscreen rather than display:none, because some
      bots skip hidden inputs but will happily fill one they can still read. Anything
      typed here came from a script, so the submit is dropped and reported as sent. */

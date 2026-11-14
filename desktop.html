@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261113-36">
+<link rel="stylesheet" href="shared.css?v=20261114-37">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -544,7 +544,7 @@
       </div>
 
       <div class="data-note" style="margin-top:28px;">
-        Nothing typed or measured here leaves the browser tab — there's no account, no server, and no cloud storage. Data shown on the Data page is sample and simulated only, clearly labeled as such, until session logging is actually built.
+        Readings are taken in the browser and stay there. If you sign in, your baseline and sessions are saved to the project's database, and the contact form sends a message. Data shown on the Data page is sample and simulated only, clearly labeled as such, until session logging is actually built.
       </div>
     </div>
   </section>
@@ -597,7 +597,7 @@
 </div><!-- /page-account -->
 
   <footer>
-    Runs entirely in this tab — nothing is sent anywhere but your glove. Requires Chrome or Edge on desktop for the connect button to work.
+    Readings stay in this tab unless you sign in to save them. Requires Chrome or Edge on desktop for the connect button to work.
   </footer>
   <div class="version-switch"><a href="mobile.html" onclick="setNeurovaVersion('mobile')">Switch to mobile version</a></div>
 
@@ -608,6 +608,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261113-36"></script>
+<script src="shared.js?v=20261114-37"></script>
 </body>
 </html>

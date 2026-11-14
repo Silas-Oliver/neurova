@@ -1736,11 +1736,28 @@
        Grotesk at 136px against the 1284px .wrap gives it, so it wrapped to a third
        line above ~1460px wide. 128px lands it at 1255px and holds the two-line block. */
     font-size:clamp(42px, 9vw, 128px);
-    line-height:0.9;
+    /* 0.9 put the two lines in contact, not close: measured in Space Grotesk at 128px,
+       line one's descenders reach 25.6px below the baseline and line two's ascenders
+       rise 89.6px, which is exactly the 115.2px that 0.9 leaves. 1.0 gives 12.8px of
+       air -- still a locked block, no longer touching. */
+    line-height:1.0;
     letter-spacing:-0.05em;
   }
 
   #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
+
+  /* The two lines turn on one word: "Invisible" already contains "visible". Underlining
+     the shared root in both lines in brand green shows the pivot, and the muted "In"
+     marks the two letters that flip the meaning. The "In" stays a legible tone on
+     purpose -- fade it any further and the heading reads "Recovery Is visible", which
+     says the opposite of what it means. */
+  #page-home .ec-intro h1 .ec-h-root{
+    text-decoration:underline;
+    text-decoration-color:var(--primary);
+    text-decoration-thickness:0.045em;
+    text-underline-offset:0.1em;
+  }
+  #page-home .ec-intro h1 .ec-h-neg{ color:var(--muted); }
 
   /* Size alone does not catch an eye -- a bigger block of text is still a block of
      text sitting still. These give the heading something to do on arrival: the two

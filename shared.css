@@ -34,6 +34,13 @@
   }
   body{
     margin:0;
+    /* Fills the viewport so the footer can be pushed to the bottom of the screen on a
+       page whose content does not reach it. Without this, a short page -- contact is
+       one form -- ended the document mid-screen and left blank page beneath the footer
+       on any tall window. See main.wrap and .page-active below. */
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
     background:var(--bg);
     color:var(--ink);
     font-family:'IBM Plex Sans', system-ui, sans-serif;
@@ -627,6 +634,12 @@
   }
   .page{display:none;}
   .page.page-active{display:block;}
+  /* The other half of the sticky footer started on body. main is the column that holds
+     the pages and the footer; the visible page takes the leftover height, so the footer
+     sits at the bottom of a short page and flows normally on a long one. Hidden pages
+     are display:none and so are not flex items at all. */
+  main.wrap{flex:1 0 auto; display:flex; flex-direction:column;}
+  .page.page-active{flex:1 0 auto;}
   .topnav a.active{color:var(--ink); font-weight:600;}
   .data-toolbar{display:flex; gap:10px; flex-wrap:wrap; margin:18px 0;}
   .data-chart-wrap{background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--radius-lg); padding:20px; margin-top:8px;}

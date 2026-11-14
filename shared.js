@@ -2927,10 +2927,12 @@ window.Neurova = window.Neurova || {};
     const res = await fetch('https://api.web3forms.com/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      // Deliberately no subject or from_name here. Web3Forms lets the request override
+      // the dashboard, so sending them from code silently wins over whatever is set
+      // under Email Configuration and makes those fields look broken. Leaving them out
+      // keeps the subject and sender name editable in the dashboard, with no deploy.
       body: JSON.stringify({
         access_key: WEB3FORMS_KEY,
-        subject: 'Neurova contact form — ' + name,
-        from_name: 'Neurova site',
         name: name,
         email: email,
         message: message

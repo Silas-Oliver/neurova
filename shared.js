@@ -2918,6 +2918,31 @@ window.Neurova = window.Neurova || {};
   // Lives in this IIFE because it needs db, withTimeout and NETWORK_TIMEOUT_MS, which
   // are all scoped here. Writes to a top-level 'messages' collection, not under a user,
   // because the whole point is that someone without an account can reach us.
+  // Public by design -- it identifies the form, not the inbox. The destination address
+  // lives in the Web3Forms dashboard, so it can be changed without touching this file,
+  // and there is still no address on the page for a scraper to take.
+  const WEB3FORMS_KEY = 'a970554d-9d63-47de-8dac-36da1bac54e0';
+
+  async function emailContactMessage(name, email, message){
+    const res = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        access_key: WEB3FORMS_KEY,
+        subject: 'Neurova contact form — ' + name,
+        from_name: 'Neurova site',
+        name: name,
+        email: email,
+        message: message
+      })
+    });
+    // A 200 with success:false is still a failure -- the key could be wrong or the
+    // monthly quota spent, and neither shows up as a bad status code.
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || data.success === false) throw new Error(data.message || ('HTTP ' + res.status));
+    return data;
+  }
+
   const contactForm = document.getElementById('contactForm');
   if(contactForm){
     const nameEl = document.getElementById('contactName');
@@ -2964,29 +2989,40 @@ window.Neurova = window.Neurova || {};
       if(!name) return fail('Add your name, so I know who this is from.', nameEl);
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('That email address does not look right, and a reply would not reach you.', emailEl);
       if(message.length < 10) return fail('Add a bit more than that — a sentence or two is plenty.', msgEl);
-      if(!db) return fail('Messages are not getting through from this browser right now. Try again on a different network, or reload the page.');
-
       sending = true;
       submitBtn.disabled = true;
       submitBtn.textContent = 'Sending…';
       setStatus('');
-      try{
-        await withTimeout(db.collection('messages').add({
-          name: name,
-          email: email,
-          message: message,
-          at: firebase.firestore.FieldValue.serverTimestamp()
-        }), NETWORK_TIMEOUT_MS);
+
+      // Two independent routes, tried together rather than one after the other.
+      // Firestore is the durable copy -- it survives a spent email quota or an outage
+      // at Web3Forms. The email is the part that actually gets noticed. Either one
+      // landing means the message is not lost, so this only reports failure when both
+      // fail. Running them in parallel also means one slow route cannot delay the other.
+      const store = db
+        ? withTimeout(db.collection('messages').add({
+            name: name,
+            email: email,
+            message: message,
+            at: firebase.firestore.FieldValue.serverTimestamp()
+          }), NETWORK_TIMEOUT_MS)
+        : Promise.reject(new Error('Firestore unavailable'));
+      const mail = withTimeout(emailContactMessage(name, email, message), NETWORK_TIMEOUT_MS);
+
+      const [storeResult, mailResult] = await Promise.allSettled([store, mail]);
+      if(storeResult.status === 'rejected') console.error('Contact message not saved:', storeResult.reason);
+      if(mailResult.status === 'rejected') console.error('Contact message not emailed:', mailResult.reason);
+
+      if(storeResult.status === 'rejected' && mailResult.status === 'rejected'){
+        setStatus('That did not send. Check your connection and try again.', 'err');
+      } else {
         contactForm.reset();
         setStatus('Sent. I read these myself and will reply to the address you gave.', 'ok');
-      }catch(err){
-        console.error('Contact message failed to send:', err);
-        setStatus('That did not send. Check your connection and try again.', 'err');
-      }finally{
-        sending = false;
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Send message';
       }
+
+      sending = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send message';
     });
   }
 })();

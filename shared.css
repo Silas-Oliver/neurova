@@ -1746,13 +1746,9 @@
 
   #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
 
-  /* The two lines turn on one word: "Invisible" already contains "visible". Setting the
-     "In" in the muted tone marks the two letters that flip the meaning and lets the
-     word underneath read through, which is the whole of the effect -- an underline on
-     the shared root as well was one mark too many and the heading read as cluttered.
-     The "In" stays a legible tone on purpose: fade it further and the heading reads
-     "Recovery Is visible", which says the opposite of what it means. */
-  #page-home .ec-intro h1 .ec-h-neg{ color:var(--muted); }
+  /* The invisible/visible pivot is left to the words. Marking it typographically was
+     tried twice -- a brand-green underline on the shared root, then a muted "In" on its
+     own -- and both read as clutter on a heading this size. */
 
   /* Size alone does not catch an eye -- a bigger block of text is still a block of
      text sitting still. These give the heading something to do on arrival: the two

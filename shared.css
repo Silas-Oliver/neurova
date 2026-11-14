@@ -1746,17 +1746,12 @@
 
   #page-home .ec-intro h1 .muted-line{ color:var(--primary); }
 
-  /* The two lines turn on one word: "Invisible" already contains "visible". Underlining
-     the shared root in both lines in brand green shows the pivot, and the muted "In"
-     marks the two letters that flip the meaning. The "In" stays a legible tone on
-     purpose -- fade it any further and the heading reads "Recovery Is visible", which
-     says the opposite of what it means. */
-  #page-home .ec-intro h1 .ec-h-root{
-    text-decoration:underline;
-    text-decoration-color:var(--primary);
-    text-decoration-thickness:0.045em;
-    text-underline-offset:0.1em;
-  }
+  /* The two lines turn on one word: "Invisible" already contains "visible". Setting the
+     "In" in the muted tone marks the two letters that flip the meaning and lets the
+     word underneath read through, which is the whole of the effect -- an underline on
+     the shared root as well was one mark too many and the heading read as cluttered.
+     The "In" stays a legible tone on purpose: fade it further and the heading reads
+     "Recovery Is visible", which says the opposite of what it means. */
   #page-home .ec-intro h1 .ec-h-neg{ color:var(--muted); }
 
   /* Size alone does not catch an eye -- a bigger block of text is still a block of

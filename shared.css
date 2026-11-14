@@ -721,8 +721,21 @@
   /* Centred in its own column rather than left-aligned in the full page width. A 600px
      form hugging the left edge of a 1340px page reads as an unfinished layout; centred,
      the same form reads as the whole point of the page. */
-  .contact-shell{max-width:600px; margin:0 auto;}
-  .contact-head{max-width:none; margin-bottom:26px; text-align:center;}
+  /* Typography fills the left half, not filler copy. A centred 600px card left roughly
+     400px of empty page either side; putting the heading at display size opposite the
+     form uses that width with the one thing the page already had to say. */
+  .contact-layout{
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,520px);
+    gap:64px; align-items:center;
+  }
+  .contact-intro h2{
+    font-size:clamp(44px, 6.5vw, 92px);
+    line-height:0.95; letter-spacing:-0.04em; margin:0;
+  }
+  .contact-intro p{
+    color:var(--muted); font-size:17px; line-height:1.55;
+    margin:18px 0 0; max-width:34ch;
+  }
   .contact-form{max-width:none;}
   /* Full width inside the card -- a small button floating at the bottom-left of a card
      this wide looks like it was left there rather than placed. */
@@ -741,20 +754,12 @@
     background:#eaf5ef; border:1px solid #bcdcc9; color:#1f5c3d;
     border-radius:var(--radius); padding:10px 12px;
   }
-  }
-  /* A honeypot, not a real field: offscreen rather than display:none, because some
-     bots skip hidden inputs but will happily fill one they can still read. Anything
-     typed here came from a script, so the submit is dropped and reported as sent. */
-  .contact-hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;}
-  .contact-status{font-size:13.5px; line-height:1.45; margin-bottom:14px;}
-  .contact-status:empty{display:none;}
-  .contact-status.is-err{
-    background:#fdeceb; border:1px solid #f0c4bd; color:#9a3b2e;
-    border-radius:var(--radius); padding:10px 12px;
-  }
-  .contact-status.is-ok{
-    background:#eaf5ef; border:1px solid #bcdcc9; color:#1f5c3d;
-    border-radius:var(--radius); padding:10px 12px;
+  /* Stacks heading over form on a phone, and drops the heading out of display size --
+     at 92px it would push the form itself below the fold. */
+  @media (max-width:900px){
+    .contact-layout{grid-template-columns:1fr; gap:26px; align-items:start;}
+    .contact-intro h2{font-size:clamp(32px, 8vw, 42px); line-height:1.05;}
+    .contact-intro p{font-size:15.5px; max-width:none;}
   }
   .auth-error{
     background:#fdeceb; border:1px solid #f0c4bd; color:#9a3b2e; border-radius:var(--radius);

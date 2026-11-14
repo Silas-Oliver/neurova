@@ -2,7 +2,7 @@ window.Neurova = window.Neurova || {};
 
 (function(){
   // ---------------- page routing ----------------
-  const PAGES = ['home', 'test-menu', 'data', 'specs', 'account'];
+  const PAGES = ['home', 'test-menu', 'data', 'specs', 'contact', 'account'];
   let dataChartReady = false;
 
   function showPage(name){
@@ -2912,6 +2912,82 @@ window.Neurova = window.Neurova || {};
     renderAccountPanel();
     renderDataAuthBanner();
     revealSite();
+  }
+
+  // ---------------- contact form ----------------
+  // Lives in this IIFE because it needs db, withTimeout and NETWORK_TIMEOUT_MS, which
+  // are all scoped here. Writes to a top-level 'messages' collection, not under a user,
+  // because the whole point is that someone without an account can reach us.
+  const contactForm = document.getElementById('contactForm');
+  if(contactForm){
+    const nameEl = document.getElementById('contactName');
+    const emailEl = document.getElementById('contactEmail');
+    const msgEl = document.getElementById('contactMessage');
+    const trapEl = document.getElementById('contactCompany');
+    const statusEl = document.getElementById('contactStatus');
+    const submitBtn = document.getElementById('contactSubmit');
+    let sending = false;
+
+    function setStatus(text, kind){
+      statusEl.textContent = text || '';
+      statusEl.className = 'contact-status' + (kind ? ' is-' + kind : '');
+    }
+    function fail(text, el){
+      setStatus(text, 'err');
+      if(el) el.focus();
+    }
+
+    // Clear the error as soon as they start fixing it, so it does not sit there
+    // contradicting what is now in the field.
+    [nameEl, emailEl, msgEl].forEach(el => {
+      el.addEventListener('input', () => {
+        if(statusEl.classList.contains('is-err')) setStatus('');
+      });
+    });
+
+    contactForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      if(sending) return;
+
+      // Filled only by a script. Report success and drop it -- telling a bot it failed
+      // just invites it to retry with the field left blank.
+      if(trapEl.value){
+        contactForm.reset();
+        setStatus('Sent. I read these myself and will reply to the address you gave.', 'ok');
+        return;
+      }
+
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      const message = msgEl.value.trim();
+
+      if(!name) return fail('Add your name, so I know who this is from.', nameEl);
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('That email address does not look right, and a reply would not reach you.', emailEl);
+      if(message.length < 10) return fail('Add a bit more than that — a sentence or two is plenty.', msgEl);
+      if(!db) return fail('Messages are not getting through from this browser right now. Try again on a different network, or reload the page.');
+
+      sending = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+      setStatus('');
+      try{
+        await withTimeout(db.collection('messages').add({
+          name: name,
+          email: email,
+          message: message,
+          at: firebase.firestore.FieldValue.serverTimestamp()
+        }), NETWORK_TIMEOUT_MS);
+        contactForm.reset();
+        setStatus('Sent. I read these myself and will reply to the address you gave.', 'ok');
+      }catch(err){
+        console.error('Contact message failed to send:', err);
+        setStatus('That did not send. Check your connection and try again.', 'err');
+      }finally{
+        sending = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send message';
+      }
+    });
   }
 })();
 

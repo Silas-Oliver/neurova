@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261004-25">
+<link rel="stylesheet" href="shared.css?v=20261113-26">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -41,6 +41,7 @@
       <a href="#test-menu" data-nav="test-menu">Test menu</a>
       <a href="#data" data-nav="data">Data</a>
       <a href="#specs" data-nav="specs">Specs / About</a>
+      <a href="#contact" data-nav="contact">Contact</a>
       <a href="#account" data-nav="account">Account</a>
     </div>
     <div class="topbar-right">
@@ -59,6 +60,7 @@
       <a href="#test-menu" data-nav="test-menu">Test menu</a>
       <a href="#data" data-nav="data">Data</a>
       <a href="#specs" data-nav="specs">Specs / About</a>
+      <a href="#contact" data-nav="contact">Contact</a>
       <a href="#account" data-nav="account">Account</a>
     </nav>
   </div>
@@ -601,6 +603,44 @@
   </section>
 </div><!-- /page-specs -->
 
+<div class="page" data-page="contact" id="page-contact">
+  <section>
+    <div class="wrap" style="padding-top:56px; padding-bottom:56px;">
+      <div class="section-head">
+        <h2>Contact</h2>
+        <p>Questions about the glove, the measurements, or the project itself. Messages come straight to me and I answer them myself.</p>
+      </div>
+
+      <form id="contactForm" class="contact-form" novalidate>
+        <div class="form-group">
+          <label for="contactName">Name</label>
+          <input type="text" id="contactName" autocomplete="name" maxlength="80" required>
+        </div>
+        <div class="form-group">
+          <label for="contactEmail">Email</label>
+          <input type="email" id="contactEmail" autocomplete="email" maxlength="120" placeholder="Where a reply should go" required>
+        </div>
+        <div class="form-group">
+          <label for="contactMessage">Message</label>
+          <textarea id="contactMessage" rows="7" maxlength="2000" required></textarea>
+        </div>
+        <div class="contact-hp" aria-hidden="true">
+          <label for="contactCompany">Company</label>
+          <input type="text" id="contactCompany" tabindex="-1" autocomplete="off">
+        </div>
+        <div id="contactStatus" class="contact-status" role="status" aria-live="polite"></div>
+        <div class="auth-actions">
+          <button type="submit" class="btn btn-primary" id="contactSubmit">Send message</button>
+        </div>
+      </form>
+
+      <div class="data-note" style="margin-top:28px; max-width:560px;">
+        Your name, your email address and your message are stored in this project's database so the message can be read and replied to. Nothing else is recorded, and none of it is shared.
+      </div>
+    </div>
+  </section>
+</div><!-- /page-contact -->
+
 <div class="page" data-page="account" id="page-account">
   <section>
     <div class="wrap" style="padding-top:56px; padding-bottom:56px; max-width:480px; margin:0 auto;">
@@ -648,7 +688,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261004-25"></script>
+<script src="shared.js?v=20261113-26"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

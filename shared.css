@@ -709,7 +709,30 @@
     border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--panel); color:var(--ink);
   }
   .form-group input:focus-visible{outline:2px solid var(--primary); outline-offset:1px;}
+  .form-group textarea{
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; padding:10px 12px;
+    border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--panel); color:var(--ink);
+    resize:vertical; min-height:120px; line-height:1.5;
+  }
+  .form-group textarea:focus-visible{outline:2px solid var(--primary); outline-offset:1px;}
   .auth-actions{display:flex; gap:10px; margin-top:6px; flex-wrap:wrap;}
+
+  /* ---- contact form ---- */
+  .contact-form{max-width:560px;}
+  /* A honeypot, not a real field: offscreen rather than display:none, because some
+     bots skip hidden inputs but will happily fill one they can still read. Anything
+     typed here came from a script, so the submit is dropped and reported as sent. */
+  .contact-hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;}
+  .contact-status{font-size:13.5px; line-height:1.45; margin-bottom:14px;}
+  .contact-status:empty{display:none;}
+  .contact-status.is-err{
+    background:#fdeceb; border:1px solid #f0c4bd; color:#9a3b2e;
+    border-radius:var(--radius); padding:10px 12px;
+  }
+  .contact-status.is-ok{
+    background:#eaf5ef; border:1px solid #bcdcc9; color:#1f5c3d;
+    border-radius:var(--radius); padding:10px 12px;
+  }
   .auth-error{
     background:#fdeceb; border:1px solid #f0c4bd; color:#9a3b2e; border-radius:var(--radius);
     padding:10px 12px; font-size:13px; margin-bottom:16px; line-height:1.45;

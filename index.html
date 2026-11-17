@@ -7,15 +7,26 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <script>
 (function(){
-  var SITE_VERSION = '20261116-45';
+  var SITE_VERSION = '20261116-46';
   try{
     var remembered = localStorage.getItem('neurovaSiteVersion');
     var target;
     if(remembered === 'desktop' || remembered === 'mobile'){
       target = remembered + '.html';
     } else {
-      var looksMobile = window.matchMedia('(max-width: 860px)').matches
-        || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      // Tablets get the desktop layout. The old test matched iPad at any size, so an
+      // iPad in landscape loaded the phone layout across 1024px: cards, metric tabs and
+      // the chart strung edge to edge. Capping that column only traded stretched for
+      // squished -- a phone layout is the wrong layout for a tablet either way, and the
+      // desktop one has no horizontal overflow at 768 or 1024.
+      //
+      // iPad is gone from the list and the width test drops to 700px, which is below an
+      // iPad in portrait (768) and above any phone. Android is gone too: Android phones
+      // send "Mobi" and are still caught, while Android tablets do not and now get the
+      // desktop layout like every other tablet. iPadOS 13+ reports itself as Macintosh
+      // anyway, so for those the width test was always the one doing the work.
+      var looksMobile = window.matchMedia('(max-width: 700px)').matches
+        || /Mobi|iPhone|iPod/i.test(navigator.userAgent);
       target = looksMobile ? 'mobile.html' : 'desktop.html';
     }
     // Bumping ?v= on a release changes the URL, which is the only thing that reliably

@@ -62,7 +62,14 @@
   .topbar{
     display:flex; align-items:center; justify-content:space-between;
     padding:14px 28px;
+    /* The desktop header is brand + six nav links + the status chip, which together
+       cannot shrink below about 590px. The router sends anything under 860px to the
+       mobile page, but "Switch to desktop version" lets a phone land here anyway, and
+       the header then ran off the side and dragged the page with it. Wrapping costs
+       nothing above 590px, where it never has to. */
+    flex-wrap:wrap; row-gap:10px;
   }
+  .topnav{flex-wrap:wrap; row-gap:8px;}
   .topbar-right{display:flex; align-items:center; gap:14px; flex:none;}
   .brand{display:flex; align-items:center; gap:10px; font-weight:600; font-size:16px;}
   .brand-mark{width:20px; height:20px; flex:none;}
@@ -641,7 +648,16 @@
      the pages and the footer; the visible page takes the leftover height, so the footer
      sits at the bottom of a short page and flows normally on a long one. Hidden pages
      are display:none and so are not flex items at all. */
-  main.wrap{flex:1 0 auto; display:flex; flex-direction:column;}
+  /* width:100% and min-width:0 are both load-bearing, not belt and braces.
+     .wrap centres itself with margin:0 auto. Once body became a flex column for the
+     sticky footer, those auto margins stopped being centring and became cross-axis auto
+     margins -- which cancel stretch. main then sized to fit-content, and fit-content of
+     a page whose widest unshrinkable piece is 511px is 511px, so on a 360px phone the
+     whole layout was laid out 511px wide and scrolled sideways. width:100% gives it a
+     definite cross size to centre within instead, and min-width:0 lets it shrink below
+     its content so the pieces that scroll on their own (the chart, the metric tabs) do
+     that rather than widening the page. max-width:1340px still centres on a desktop. */
+  main.wrap{flex:1 0 auto; display:flex; flex-direction:column; width:100%; min-width:0;}
   .page.page-active{flex:1 0 auto;}
   .topnav a.active{color:var(--ink); font-weight:600;}
   .data-toolbar{display:flex; gap:10px; flex-wrap:wrap; margin:18px 0;}
@@ -1749,7 +1765,14 @@
   .ec-ghost{
     display:block; margin-top:64px;
     font-family:'Space Grotesk',sans-serif; font-weight:700;
-    font-size:clamp(90px,16vw,210px); line-height:0.8; letter-spacing:-0.05em;
+    /* The floor was 90px. "NEUROVA" is one unbreakable word, so at 90px it needs 364px
+       of line -- more than a 360px phone has. The clamp held it there instead of letting
+       16vw take over, and because a word cannot wrap it set the minimum width of the
+       whole page: the document came out 456px wide on a 360px screen and scrolled
+       sideways. overflow:hidden on .ec-cta clips the paint but does not stop the word
+       contributing to that minimum. 16vw passes 90px at 563px wide, so nothing above
+       that changes. */
+    font-size:clamp(44px,16vw,210px); line-height:0.8; letter-spacing:-0.05em;
     color:rgba(255,255,255,0.055); user-select:none;
   }
 

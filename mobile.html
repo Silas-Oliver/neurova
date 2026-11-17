@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261116-38">
+<link rel="stylesheet" href="shared.css?v=20261116-39">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -618,8 +618,8 @@
             <input type="text" id="contactName" autocomplete="name" maxlength="80" required>
           </div>
           <div class="form-group">
-            <label for="contactEmail">Email</label>
-            <input type="email" id="contactEmail" autocomplete="email" maxlength="120" placeholder="Where a reply should go" required>
+            <label for="contactEmail">Return Address</label>
+            <input type="email" id="contactEmail" autocomplete="email" maxlength="120" placeholder="name@example.com" required>
           </div>
           <div class="form-group">
             <label for="contactMessage">Message</label>
@@ -688,7 +688,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261116-38"></script>
+<script src="shared.js?v=20261116-39"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

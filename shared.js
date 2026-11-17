@@ -1643,6 +1643,11 @@ window.Neurova = window.Neurova || {};
   // percentage cannot share one scale. Percentages keep a 0-100 frame so a good run still
   // looks like a good run rather than being stretched to fill the panel.
   let chartScale = { min: 0, max: 100 };
+  // The spacing actually used between points. CHART.pointGap is the floor, not the
+  // value: with a handful of sessions the chart spreads to fill whatever width the card
+  // has, and only once the points are dense enough to need more than that does it stop
+  // widening and start scrolling.
+  let chartGap = CHART.pointGap;
   function computeScale(values, metric){
     const vals = values.filter(v => typeof v === 'number' && isFinite(v));
     if(metric.fixed) return { min: metric.fixed[0], max: metric.fixed[1] };
@@ -1653,7 +1658,7 @@ window.Neurova = window.Neurova || {};
     return { min: min - pad, max: max + pad };
   }
 
-  function xFor(i){ return CHART.padLeft + i * CHART.pointGap; }
+  function xFor(i){ return CHART.padLeft + i * chartGap; }
   function yFor(v){
     const span = chartScale.max - chartScale.min || 1;
     const t = (v - chartScale.min) / span;
@@ -1667,7 +1672,19 @@ window.Neurova = window.Neurova || {};
     if(n === 0){ svg.innerHTML = ''; svg.setAttribute('viewBox', '0 0 260 240'); return; }
 
     const metric = activeMetric();
-    const width = CHART.padLeft + Math.max(0, n - 1) * CHART.pointGap + CHART.padRight;
+
+    // Fill the card rather than drawing a fixed 68px per point and leaving the rest of
+    // it empty. Five sessions at a fixed gap came to 354px, so on a desktop the chart sat
+    // in the left quarter of a 1240px card with nothing beside it. The gap now stretches
+    // to whatever room there is, with CHART.pointGap as the minimum -- so a long history
+    // still reaches the point where it scrolls instead of cramming.
+    const scroller = document.getElementById('chartScroll');
+    const avail = scroller ? scroller.clientWidth : 0;
+    const gaps = Math.max(0, n - 1);
+    const roomPerGap = gaps ? (avail - CHART.padLeft - CHART.padRight) / gaps : CHART.pointGap;
+    chartGap = Math.max(CHART.pointGap, roomPerGap || CHART.pointGap);
+
+    const width = CHART.padLeft + gaps * chartGap + CHART.padRight;
     svg.setAttribute('viewBox', `0 0 ${Math.max(width, 260)} ${CHART.height}`);
     svg.setAttribute('width', Math.max(width, 260));
     svg.setAttribute('height', CHART.height);
@@ -1775,6 +1792,20 @@ window.Neurova = window.Neurova || {};
     }).filter(p => p.value !== null && isFinite(p.value));
     chartScale = computeScale(chartPoints.map(p => p.value), metric);
   }
+
+  // The chart sizes itself from the card, so it has to be redrawn when the card changes
+  // width -- rotating a tablet, or dragging a desktop window narrower. Debounced, drawn
+  // in its settled state, and only while the Data page is the one on screen.
+  let chartResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if(chartResizeTimer) clearTimeout(chartResizeTimer);
+    chartResizeTimer = setTimeout(() => {
+      const page = document.getElementById('page-data');
+      if(page && page.classList.contains('page-active') && chartPoints.length){
+        renderChart(chartPoints.length - 1, 0);
+      }
+    }, 150);
+  });
 
   function renderMetricTabs(){
     const wrap = document.getElementById('dataMetricTabs');

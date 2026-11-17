@@ -10,7 +10,7 @@
 <link rel="icon" href="favicon-96x96.png" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261116-39">
+<link rel="stylesheet" href="shared.css?v=20261116-40">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -590,12 +590,6 @@
         <div style="display:flex; align-items:center; gap:12px;"><span class="status-chip-sm st-planned">Planned</span><span>Recovery tracking over time</span></div>
       </div>
 
-      <div class="section-head" style="margin-top:44px;">
-        <h2>Why this project</h2>
-        <p>Musicians like Augustin Hadelich and Hilary Hahn have both dealt with real nerve, tendon, or disc injuries mid-career, and recovery is usually tracked by feel — how a passage feels to play — rather than by any consistent measurement. Existing products, like the MusicGlove hand-therapy device, don't cover this specific gap: an ongoing, personal record of contact-verified signal and reaction data over the course of a recovery. This project is an attempt to close that gap with something wearable and low-cost.</p>
-        <p>The next real-world step is a conversation with a hand surgeon, physical therapist, or occupational therapist, to sanity-check electrode placement and the reaction-time test design against how nerve recovery is actually assessed clinically.</p>
-      </div>
-
       <div class="data-note" style="margin-top:28px;">
         Readings are taken in the browser and stay there. If you sign in, your baseline and sessions are saved to the project's database, and the contact form sends a message. Data shown on the Data page is sample and simulated only, clearly labeled as such, until session logging is actually built.
       </div>
@@ -688,7 +682,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261116-39"></script>
+<script src="shared.js?v=20261116-40"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

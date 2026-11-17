@@ -1596,25 +1596,31 @@ window.Neurova = window.Neurova || {};
     if(Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + ' kΩ';
     return Math.round(v) + ' Ω';
   }
-  function fmtPercent(v){ return (v === null || v === undefined) ? '—' : Math.round(v) + '%'; }
 
+  function fmtMultiple(v){ return (v === null || v === undefined) ? '—' : v.toFixed(2) + '×'; }
+
+  // Contact quality used to lead this list, plotted as a share of good samples. It was
+  // the wrong shape for a trend: contact has to read good every session before anything
+  // else is worth recording, so the honest view of it is pass/fail on the day, not a
+  // line that can slope. What replaces it is the same measurement judged against the
+  // baseline it was taken under, which does carry information across sessions.
   const DATA_METRICS = [
-    { key: 'contact', label: 'Contact quality', from: 'contact', fixed: [0, 100], fmt: fmtPercent,
-      blurb: 'Share of samples that read as good contact. Higher is better.',
-      value: s => {
-        const total = (s.goodCount || 0) + (s.poorCount || 0) + (s.noneCount || 0);
-        return total ? (100 * (s.goodCount || 0) / total) : null;
-      } },
     { key: 'resistance', label: 'Contact resistance', from: 'contact', fmt: fmtOhms,
       blurb: 'Average skin resistance measured during the test. Lower usually means firmer contact.',
       value: s => (typeof s.avgResistanceOhms === 'number' ? s.avgResistanceOhms : null) },
     { key: 'baseline', label: 'Calibrated baseline', from: 'calibration', fmt: fmtOhms,
       blurb: 'The personal baseline captured at each calibration. How much this moves between days is your drift.',
-      value: s => (typeof s.baselineOhms === 'number' ? s.baselineOhms : null) }
+      value: s => (typeof s.baselineOhms === 'number' ? s.baselineOhms : null) },
+    { key: 'margin', label: 'Contact vs baseline', from: 'contact', fmt: fmtMultiple,
+      blurb: 'Average resistance as a multiple of the baseline that session was judged against. Closer to 1 means the electrodes sat as firmly as they did at calibration.',
+      value: s => (typeof s.avgResistanceOhms === 'number'
+                   && typeof s.baselineOhms === 'number'
+                   && s.baselineOhms > 0)
+        ? (s.avgResistanceOhms / s.baselineOhms) : null }
   ];
 
   let dataSessions = null;      // real sessions, oldest first; null when not signed in
-  let dataMetricKey = 'contact';
+  let dataMetricKey = 'resistance';   // 'contact' was removed; this is the first tab now
   let chartPoints = [];         // { value, label, detail }
 
   function activeMetric(){ return DATA_METRICS.find(m => m.key === dataMetricKey) || DATA_METRICS[0]; }
@@ -1687,21 +1693,40 @@ window.Neurova = window.Neurova || {};
   }
 
   let animFrame = null;
+  let animFallback = null;
   function animateReveal(fromCount, toCount, duration){
     if(animFrame) cancelAnimationFrame(animFrame);
+    if(animFallback) clearTimeout(animFallback);
     if(toCount <= 0){ renderChart(0, 0); return; }
     const start = performance.now();
     const span = toCount - fromCount;
+    let settled = false;
+
+    function settle(){
+      if(settled) return;
+      settled = true;
+      if(animFrame) cancelAnimationFrame(animFrame);
+      renderChart(toCount, 0);
+      const scroller = document.getElementById('chartScroll');
+      if(scroller) scroller.scrollLeft = scroller.scrollWidth;
+    }
+
+    // The chart is only ever drawn inside a frame callback, so if frames stop arriving
+    // it keeps whatever was on screen before. document.hidden does not catch that: a
+    // window that is merely backgrounded, occluded or power-throttled still reports
+    // itself visible while rAF drops to a couple of frames a second. Measured two frames
+    // in 800ms in one such case, which left the chart showing the previous metric while
+    // the blurb beneath it described the new one. setTimeout keeps firing when rAF does
+    // not, so this guarantees the final state lands either way.
+    animFallback = setTimeout(settle, duration + 400);
+
     function frame(now){
+      if(settled) return;
       const t = Math.min(1, (now - start) / duration);
       const current = fromCount + span * easeInOutCubic(t);
       renderChart(Math.floor(current), current - Math.floor(current));
       if(t < 1){ animFrame = requestAnimationFrame(frame); }
-      else {
-        renderChart(toCount, 0);
-        const scroller = document.getElementById('chartScroll');
-        if(scroller) scroller.scrollLeft = scroller.scrollWidth;
-      }
+      else { clearTimeout(animFallback); settle(); }
     }
     animFrame = requestAnimationFrame(frame);
   }

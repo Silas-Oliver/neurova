@@ -212,7 +212,10 @@
     position:fixed; top:22px; left:28px;
     display:flex; align-items:center; gap:8px;
     font-size:19px; font-weight:600; color:var(--ink);
-    cursor:pointer; text-decoration:none;
+    /* Not a link any more. It used to navigate home, which let anyone step past the
+       sign-in screen by clicking the logo -- so the cursor should not invite the click
+       either. "Continue as a guest" is the sanctioned way in. */
+    cursor:default; text-decoration:none;
   }
   .auth-brand .brand-mark{width:23px; height:23px; color:var(--primary);}
 

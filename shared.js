@@ -2024,6 +2024,10 @@ window.Neurova = window.Neurova || {};
       'auth/invalid-action-code': "That sign-in link has already been used, or it expired. Ask for a new one.",
       'auth/expired-action-code': "That sign-in link expired. Ask for a new one.",
       'auth/user-disabled': "That account has been disabled.",
+      // What Firebase returns when the Anonymous provider is switched off, which is how
+      // every project starts. Without this the guest button fails with the generic
+      // "something went wrong", which points at nothing.
+      'auth/admin-restricted-operation': "Guest access isn't switched on for this project yet — enable Anonymous under Authentication, Sign-in method.",
       // Firebase's no-cost plan allows 5 email-link sign-ins per day across the whole
       // project. Nothing is broken when this happens and waiting is the only cure, so the
       // message points at the two routes that have no such limit.
@@ -2162,7 +2166,32 @@ window.Neurova = window.Neurova || {};
   // Someone arriving by link has no display name yet, which is also what marks them as
   // new: a Google account brings one with it and skips onboarding entirely.
   function needsOnboarding(){
-    return !!currentUser && !currentUser.displayName;
+    // A guest has no display name and never will, so the displayName test alone would
+    // march every visitor into onboarding and ask them to name an account they never
+    // created. Anonymous sessions skip it.
+    return !!currentUser && !currentUser.isAnonymous && !currentUser.displayName;
+  }
+
+  function isGuest(){
+    return !!currentUser && currentUser.isAnonymous;
+  }
+
+  // Firebase anonymous auth rather than a local "guest" flag. It issues a real uid, so
+  // a guest's calibration saves under the same Firestore rules as anyone else's and the
+  // rest of the site needs no special case. The cost is that the session lives in this
+  // browser only -- which the guest panel says plainly.
+  async function signInAsGuest(){
+    authError = '';
+    authBusy = true;
+    renderAccountPanel();
+    try{
+      await auth.signInAnonymously();
+      // onAuthStateChanged re-renders on success.
+    }catch(err){
+      authBusy = false;
+      authError = reportAuthError('auth', err);
+      renderAccountPanel();
+    }
   }
 
   const GOOGLE_ICON_SVG = `<svg viewBox="0 0 18 18">
@@ -2356,6 +2385,41 @@ window.Neurova = window.Neurova || {};
     }
   }
 
+  // Deliberately not renderSignedIn with the name swapped out: that panel offers
+  // "member since", an export and account deletion, none of which mean anything for a
+  // session that exists only in this browser.
+  function renderGuest(){
+    if(!accountPanel) return;
+    accountPanel.innerHTML = `
+      <div class="auth-card">
+        <div class="auth-signed-in-row">
+          <div class="auth-avatar">G</div>
+          <div>
+            <div style="font-weight:600;">Browsing as a guest</div>
+            <div style="color:var(--muted); font-size:12.5px;">No account, nothing to sign out of</div>
+          </div>
+        </div>
+        <div class="auth-note">Every page and every test works exactly as it does with an account. What you save — a calibration baseline, for instance — is kept against a temporary guest session that lives in this browser. Clear your site data or open the site on another device and it is gone.</div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="guestUpgradeBtn" ${authBusy ? 'disabled' : ''}>Create a real account</button>
+          <button class="btn btn-ghost" id="guestLeaveBtn" ${authBusy ? 'disabled' : ''}>Leave guest mode</button>
+        </div>
+      </div>`;
+
+    // Both routes end at the signed-out form. Signing out first is what makes the
+    // sign-up screen appear rather than this panel again.
+    const leave = async (mode) => {
+      authBusy = true; renderGuest();
+      try{ await auth.signOut(); }catch(e){ console.error('Guest sign-out failed:', e); }
+      authBusy = false;
+      authMode = mode;
+      usePasswordFallback = false;
+      authError = '';
+    };
+    document.getElementById('guestUpgradeBtn').addEventListener('click', () => leave('signup'));
+    document.getElementById('guestLeaveBtn').addEventListener('click', () => leave('login'));
+  }
+
   function renderSignedIn(){
     if(!accountPanel) return;
     const name = displayNameOf(currentUser);
@@ -2461,27 +2525,20 @@ window.Neurova = window.Neurova || {};
     return `
       <div class="auth-split${o.minimal ? ' auth-minimal' : ''}">
         <div class="auth-split-form">
-          <a class="auth-brand" id="authBrandHome">
+          <div class="auth-brand">
             <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
               <circle cx="18" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
               <path d="M9 12H15" stroke="currentColor" stroke-width="1.6"/>
             </svg>
             <span>Neurova</span>
-          </a>
+          </div>
           ${inner}
         </div>
         ${o.minimal ? '' : `<div class="auth-split-art"><img src="login-art.jpg" alt="" decoding="async"></div>`}
       </div>`;
   }
 
-  function wireBrandHome(){
-    const b = document.getElementById('authBrandHome');
-    if(b) b.addEventListener('click', () => {
-      const link = document.querySelector('.topnav a[data-nav="home"], .mobile-nav-panel a[data-nav="home"]');
-      if(link) link.click();
-    });
-  }
 
   // "Check your email" — deliberately without the artwork, so the one outstanding action
   // is the only thing on screen.
@@ -2504,7 +2561,6 @@ window.Neurova = window.Neurova || {};
         </div>
         <button type="button" class="auth-linkish" id="changeEmailBtn">Change email address</button>
       </div>`, { minimal: true });
-    wireBrandHome();
     const resend = document.getElementById('resendLinkBtn');
     if(resend) resend.addEventListener('click', async () => {
       authBusy = true; authError = ''; renderAccountPanel();
@@ -2539,7 +2595,6 @@ window.Neurova = window.Neurova || {};
           </div>
         </form>
       </div>`, { minimal: true });
-    wireBrandHome();
     document.getElementById('confirmEmailForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       // Read before re-rendering. Re-rendering replaces the input with a fresh, empty one,
@@ -2585,7 +2640,6 @@ window.Neurova = window.Neurova || {};
           </div>
         </div>
         ${onboardFooter()}`, { minimal: true });
-      wireBrandHome();
       document.getElementById('onboardNext').addEventListener('click', () => {
         onboardStep = 1; renderAccountPanel();
       });
@@ -2613,7 +2667,6 @@ window.Neurova = window.Neurova || {};
           <button type="button" class="auth-linkish" id="onboardSkip">Skip for now</button>
         </div>
         ${onboardFooter()}`, { minimal: true });
-      wireBrandHome();
       document.getElementById('onboardSkip').addEventListener('click', () => {
         authError = ''; onboardStep = 2; renderAccountPanel();
       });
@@ -2659,7 +2712,6 @@ window.Neurova = window.Neurova || {};
         </form>
       </div>
       ${onboardFooter()}`, { minimal: true });
-    wireBrandHome();
     document.getElementById('onboardNameForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('onboardName').value.trim();
@@ -2716,8 +2768,9 @@ window.Neurova = window.Neurova || {};
             </div>
           </form>
           <button type="button" class="auth-linkish" id="usePasswordBtn">Use a password instead</button>
+          <button type="button" class="auth-linkish" id="guestSignInBtn" ${authBusy ? 'disabled' : ''}>Continue as a guest</button>
         </div>`);
-      wireBrandHome();
+      document.getElementById('guestSignInBtn').addEventListener('click', signInAsGuest);
       document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
       document.getElementById('usePasswordBtn').addEventListener('click', () => {
         usePasswordFallback = true;
@@ -2787,9 +2840,10 @@ window.Neurova = window.Neurova || {};
         </div>
         ${(PASSWORDLESS_SIGNIN_ENABLED && isMobileLayout()) ? `
         <button type="button" class="auth-linkish" id="useLinkBtn">Use an email link instead</button>` : ''}
+        <button type="button" class="auth-linkish" id="guestSignInBtn" ${authBusy ? 'disabled' : ''}>Continue as a guest</button>
       </div>`);
 
-    wireBrandHome();
+    document.getElementById('guestSignInBtn').addEventListener('click', signInAsGuest);
 
     // Without this the password form is a dead end: the button that got you here only
     // exists on the link screen, so there was no way back to the passwordless flow.
@@ -2849,6 +2903,7 @@ window.Neurova = window.Neurova || {};
     const takeover = !!firebaseReady && (!currentUser || needsOnboarding());
     document.body.classList.toggle('auth-fullscreen', takeover);
     if(!firebaseReady) return renderNotConfigured();
+    if(isGuest()) return renderGuest();
     if(currentUser) return needsOnboarding() ? renderOnboarding() : renderSignedIn();
     if(authFlow === 'linkSent') return renderLinkSent();
     if(authFlow === 'confirmEmail') return renderConfirmEmail();

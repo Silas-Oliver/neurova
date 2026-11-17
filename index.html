@@ -8,6 +8,13 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f4f6f4">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- Dark-appearance home screen icon. Apple does not document media on
+     apple-touch-icon, so Safari may ignore this entirely; the plain link above is
+     declared first and stands as the fallback. Both variants are dark tiles, so
+     whichever one iOS picks the icon still reads -- this only changes the backdrop
+     from the site green-black to the near-black gradient Apple puts behind dark
+     icons. Untested on a device. -->
+<link rel="apple-touch-icon" href="apple-touch-icon-dark.png" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -24,7 +31,7 @@
 </script>
 <script>
 (function(){
-  var SITE_VERSION = '20261117-48';
+  var SITE_VERSION = '20261117-49';
   try{
     var remembered = localStorage.getItem('neurovaSiteVersion');
     var target;

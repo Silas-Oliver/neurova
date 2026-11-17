@@ -945,6 +945,13 @@
   .force-mobile .auth-actions{ display:flex; flex-wrap:wrap; gap:10px; }
   .force-mobile .auth-actions .btn{ flex:1 1 auto; }
 
+  /* The phone layout had no content cap, so on a tablet it stretched edge to edge: an
+     iPad in landscape gets this page (the router's user-agent test matches iPad at any
+     size), and at 1024px the cards, metric tabs and chart were strung across the full
+     width with the chart stranded in the left third. Capping the column holds the
+     layout at the proportions it was designed for and centres it. */
+  .force-mobile main.wrap{ max-width:720px; }
+
   /* The tab bar replaces the hamburger, so the menu affordances go away entirely. */
   .force-mobile .hamburger,
   .force-mobile .mobile-nav-panel,

@@ -4,6 +4,11 @@ window.Neurova = window.Neurova || {};
   // ---------------- page routing ----------------
   const PAGES = ['home', 'test-menu', 'data', 'specs', 'contact', 'account'];
   let dataChartReady = false;
+  // Declared up here, not beside initDataChart far below. showPage() runs during
+  // module init and calls initDataChart() when the page loads straight onto #data,
+  // which reached this binding before its declaration had run -- a temporal dead
+  // zone ReferenceError that left the chart uninitialised on that one entry path.
+  let dataLoadToken = 0;
 
   function showPage(name){
     if(!PAGES.includes(name)) name = 'home';
@@ -32,7 +37,13 @@ window.Neurova = window.Neurova || {};
     });
   });
 
-  showPage((location.hash || '#home').slice(1));
+  // Deferred by one microtask rather than called inline. showPage() reaches forward into
+  // initDataChart(), DATA_METRICS and renderMetricTabs, all declared much further down
+  // this module. Landing straight on #data therefore ran those reads before their
+  // declarations had executed and threw "Cannot access before initialization", leaving
+  // the chart uninitialised on that one entry path. A microtask runs after the module
+  // body finishes and before paint, so nothing is visibly delayed.
+  queueMicrotask(() => showPage((location.hash || '#home').slice(1)));
   window.Neurova.goToPage = showPage;
 
   // ---------------- mobile hamburger nav ----------------
@@ -1661,8 +1672,12 @@ window.Neurova = window.Neurova || {};
     svg.setAttribute('width', Math.max(width, 260));
     svg.setAttribute('height', CHART.height);
 
-    const shownFull = Math.min(revealCount, n - 1);
-    const hasPartial = frac > 0 && shownFull < n - 1;
+    // Clamped at both ends, and the partial segment checks the point it is about to read.
+    // An in-flight animation frame can land after chartPoints has been replaced by a
+    // metric switch, and a negative revealCount indexes chartPoints[-1]; either way this
+    // threw "Cannot read properties of undefined (reading 'value')" and killed the frame.
+    const shownFull = Math.max(0, Math.min(revealCount, n - 1));
+    const hasPartial = frac > 0 && shownFull < n - 1 && !!chartPoints[shownFull + 1];
 
     let grid = '';
     for(let k = 0; k <= 4; k++){
@@ -1827,7 +1842,6 @@ window.Neurova = window.Neurova || {};
   // once — and whichever finishes last would otherwise win regardless of which was asked
   // for last. The token means a superseded load discards its own result instead of
   // overwriting newer data, which is what made a signed-in page fall back to sample data.
-  let dataLoadToken = 0;
   async function initDataChart(){
     const token = ++dataLoadToken;
     renderMetricTabs();
@@ -2090,7 +2104,12 @@ window.Neurova = window.Neurova || {};
   }
 
   function displayNameOf(user){
-    return (user && user.displayName) ? user.displayName : (user ? user.email : '');
+    if(!user) return '';
+    // A guest has neither a display name nor an email, and the old fallback chain ran
+    // straight off the end into null -- which the Data page printed literally, as
+    // "Signed in as null".
+    if(user.isAnonymous) return 'Guest';
+    return user.displayName || user.email || '';
   }
 
 
@@ -2938,7 +2957,17 @@ window.Neurova = window.Neurova || {};
   function renderDataAuthBanner(){
     if(!dataAuthBanner) return;
     if(!firebaseReady){ dataAuthBanner.innerHTML = ''; return; }
-    if(currentUser){
+    if(isGuest()){
+      // Worth its own line rather than "Signed in as Guest": a guest's data does not
+      // follow them anywhere, which is the thing they need to know on a page about
+      // history.
+      dataAuthBanner.innerHTML = `<div class="data-auth-banner"><span>Browsing as a guest — anything saved stays in this browser.</span><a href="#account" data-nav="account">Create an account</a></div>`;
+      const gLink = dataAuthBanner.querySelector('a[data-nav]');
+      if(gLink) gLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if(window.Neurova.goToPage) window.Neurova.goToPage('account');
+      });
+    } else if(currentUser){
       dataAuthBanner.innerHTML = `<div class="data-auth-banner"><span>Signed in as <b style="color:var(--ink);">${displayNameOf(currentUser)}</b> — real sessions will sync here once session logging is built.</span></div>`;
     } else {
       dataAuthBanner.innerHTML = `<div class="data-auth-banner"><span>You're not signed in — this sample data is local to this browser only.</span><a href="#account" data-nav="account">Log in</a></div>`;

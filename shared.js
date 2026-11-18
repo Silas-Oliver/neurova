@@ -10,6 +10,34 @@ window.Neurova = window.Neurova || {};
   // zone ReferenceError that left the chart uninitialised on that one entry path.
   let dataLoadToken = 0;
 
+  // ---------------- arrival routing ----------------
+  //
+  // No page is restricted. A visitor who arrives signed out is shown the sign-in screen
+  // once, on arrival, with wherever they were heading remembered so that signing in --
+  // or continuing as a guest -- drops them there rather than on Home. After that they
+  // are free to go anywhere, signed in or not; the prompts in the pages do the work of
+  // explaining what an account adds.
+  //
+  // This is a soft wall rather than a gate, deliberately. A hard per-navigation check
+  // made Contact unreachable for exactly the person most likely to need it: someone who
+  // cannot sign in and wants to say so.
+
+  // The destination someone was aiming for when the sign-in screen interrupted them,
+  // held across the sign-in -- including across a Google popup, which is why this is
+  // sessionStorage and not a variable.
+  const DEST_KEY = 'neurovaAuthDest';
+  function rememberDestination(name){
+    if(!name || name === 'account' || !PAGES.includes(name)) return;
+    try{ sessionStorage.setItem(DEST_KEY, name); }catch(e){ /* storage unavailable */ }
+  }
+  function takeDestination(){
+    let d = null;
+    try{ d = sessionStorage.getItem(DEST_KEY); sessionStorage.removeItem(DEST_KEY); }catch(e){}
+    return (d && PAGES.includes(d)) ? d : null;
+  }
+  window.Neurova.rememberDestination = rememberDestination;
+  window.Neurova.takeDestination = takeDestination;
+
   function showPage(name){
     if(!PAGES.includes(name)) name = 'home';
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('page-active', p.dataset.page === name));
@@ -45,6 +73,16 @@ window.Neurova = window.Neurova || {};
   // body finishes and before paint, so nothing is visibly delayed.
   queueMicrotask(() => showPage((location.hash || '#home').slice(1)));
   window.Neurova.goToPage = showPage;
+
+  // Until now nothing listened for this, so editing the hash by hand changed the address
+  // bar and nothing else -- the page only caught up on a reload. That is both a bug in
+  // its own right (the back button did nothing) and a hole in the gate, since the check
+  // above can only run on a navigation it is told about. showPage uses replaceState
+  // rather than pushState, so this fires for manual edits and for the browser's own
+  // back and forward, and never for our own navigations.
+  window.addEventListener('hashchange', () => {
+    showPage((location.hash || '#home').slice(1));
+  });
 
   // ---------------- mobile hamburger nav ----------------
   const hamburgerBtn = document.getElementById('hamburgerBtn');
@@ -1543,9 +1581,22 @@ window.Neurova = window.Neurova || {};
         el.innerHTML = `<div class="calib-auth-note">Checking your account for a saved baseline…</div>`;
         if(window.Neurova.retryLoadCalibration) window.Neurova.retryLoadCalibration();
       });
+    } else if(user && user.isAnonymous){
+      // A guest's baseline does save -- an anonymous account is a real account as far as
+      // the database is concerned -- so the warning is not "this will be lost now" but
+      // "this is tied to a browser, and browsers get cleared".
+      el.innerHTML = `<div class="calib-auth-note">Calibrating as a guest — this baseline saves, but only in this browser. <a href="#account" data-nav="account" id="calibAuthNoteLink">Create an account to keep it</a>.</div>`;
+      const gl = document.getElementById('calibAuthNoteLink');
+      if(gl) gl.addEventListener('click', (e) => {
+        e.preventDefault();
+        if(window.Neurova.goToPage) window.Neurova.goToPage('account');
+      });
     } else if(user){
       el.innerHTML = '';
     } else {
+      // Unreachable in normal use now that the route gate requires an identity, but left
+      // in place: it is the correct thing to say if the gate is ever relaxed, and an
+      // empty note would be the wrong failure.
       el.innerHTML = `<div class="calib-auth-note">Not signed in — the board will remember this baseline, but only this board will. <a href="#account" data-nav="account" id="calibAuthNoteLink">Log in to save it to your account</a>.</div>`;
       const link = document.getElementById('calibAuthNoteLink');
       if(link) link.addEventListener('click', (e) => {
@@ -2150,7 +2201,7 @@ window.Neurova = window.Neurova || {};
   // account is not, so it is remembered here. That is what decides whether a signed-out
   // visitor should be met with the sign-up form or the log-in form.
   const HAS_ACCOUNT_KEY = 'neurovaHasAccount';
-  const AUTH_REDIRECT_KEY = 'neurovaAuthRedirected';
+  const AUTH_SEEN_KEY = 'neurovaAuthSeen';
 
   function rememberHasAccount(){
     try{ localStorage.setItem(HAS_ACCOUNT_KEY, '1'); }catch(e){ /* storage unavailable */ }
@@ -2170,21 +2221,32 @@ window.Neurova = window.Neurova || {};
   let sentToSignIn = false;   // true when this visit was routed to the account page
 
   // Runs once, on the first auth state Firebase reports after it has checked for a
-  // persisted session. Signed in, the visitor is left wherever they were heading. Signed
-  // out, they are sent to sign in -- to sign-up if this browser has never seen an account,
-  // to log-in if it has.
+  // persisted session. Signed in -- as a full account or as a guest -- the visitor is
+  // left wherever they were heading. Signed out, they are sent to sign in, to sign-up if
+  // this browser has never seen an account and to log-in if it has.
+  //
+  // This used to carry two escape hatches, and each one defeated the gate by itself: a
+  // once-per-browser-session flag, so the second visit to any page sailed through, and an
+  // exemption for any URL carrying a hash, on the reasoning that a shared link is a
+  // deliberate destination. The second was the larger hole -- it meant typing #data was
+  // not merely tolerated but was the documented way past the sign-in screen. A deliberate
+  // destination is now honoured by remembering it and going there after sign-in, which
+  // gets the visitor to the same page without leaving the door open to do it.
   function routeOnFirstResolve(user){
-    if(user){ rememberHasAccount(); revealSite(); return; }
+    if(user){ if(!user.isAnonymous) rememberHasAccount(); revealSite(); return; }
 
-    // Once per browser session, so navigating back to Home does not bounce them again.
+    // Once per browser session. This is an arrival behaviour, not a restriction, so a
+    // visitor who has already seen the sign-in screen and chosen to carry on without an
+    // account is left alone from then on.
     let already = false;
-    try{ already = sessionStorage.getItem(AUTH_REDIRECT_KEY) === '1'; }catch(e){}
+    try{ already = sessionStorage.getItem(AUTH_SEEN_KEY) === '1'; }catch(e){}
     if(already){ revealSite(); return; }
-    try{ sessionStorage.setItem(AUTH_REDIRECT_KEY, '1'); }catch(e){}
+    try{ sessionStorage.setItem(AUTH_SEEN_KEY, '1'); }catch(e){}
 
-    // A shared link to a specific page is a deliberate destination; don't hijack it.
+    // Hold on to where they were trying to go before we overwrite it with the sign-in
+    // screen, so signing in can finish the journey instead of dumping them on Home.
     const landing = (location.hash || '#home').slice(1);
-    if(landing !== 'home' && landing !== ''){ revealSite(); return; }
+    if(window.Neurova.rememberDestination) window.Neurova.rememberDestination(landing);
 
     authMode = hasAccountBefore() ? 'login' : 'signup';
     sentToSignIn = true;
@@ -2479,6 +2541,155 @@ window.Neurova = window.Neurova || {};
     }
   }
 
+  // ---------------- consent gate ----------------
+  //
+  // Shown when someone is about to create an account, and only then. Logging in does not
+  // raise it, because the agreement was given once already and asking again on every
+  // visit trains people to click past it. Guest sign-in does not raise it either: it
+  // creates no name, no address and nothing anyone could be held to.
+  //
+  // The version strings are what make the record meaningful. "They agreed" is worth very
+  // little on its own; "they agreed to version 1.0 on this date" is a fact that survives
+  // the documents being rewritten later.
+  const TERMS_VERSION = '1.0';
+  const PRIVACY_VERSION = '2026-11-17';
+  const PENDING_CONSENT_KEY = 'neurovaPendingConsent';
+
+  let consentOpen = false;
+
+  // Resolves true when both boxes are ticked and the person confirms, false if they back
+  // out. Callers await it and simply do nothing on false.
+  function requireConsent(){
+    if(consentOpen) return Promise.resolve(false);
+    consentOpen = true;
+
+    return new Promise(resolve => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'consent-backdrop';
+      backdrop.setAttribute('role', 'dialog');
+      backdrop.setAttribute('aria-modal', 'true');
+      backdrop.setAttribute('aria-labelledby', 'consentTitle');
+      backdrop.innerHTML = `
+        <div class="consent-modal">
+          <h3 id="consentTitle">Before you create an account</h3>
+          <p class="consent-sub">Two things to agree to. Both open in a new tab, and neither is long.</p>
+
+          <label class="consent-row" for="consentTerms">
+            <input type="checkbox" id="consentTerms">
+            <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a>.</span>
+          </label>
+
+          <label class="consent-row" for="consentPrivacy">
+            <input type="checkbox" id="consentPrivacy">
+            <span>I have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+          </label>
+
+          <p class="consent-hint" id="consentHint" role="status" aria-live="polite">Tick both to continue.</p>
+
+          <div class="consent-actions">
+            <button type="button" class="btn btn-primary" id="consentAccept">Agree and continue</button>
+            <button type="button" class="btn btn-ghost" id="consentCancel">Cancel</button>
+          </div>
+        </div>`;
+
+      document.body.appendChild(backdrop);
+
+      const termsBox = backdrop.querySelector('#consentTerms');
+      const privacyBox = backdrop.querySelector('#consentPrivacy');
+      const hint = backdrop.querySelector('#consentHint');
+      const boxes = [termsBox, privacyBox];
+
+      const previouslyFocused = document.activeElement;
+      backdrop.querySelector('#consentAccept').focus();
+
+      function close(result){
+        consentOpen = false;
+        document.removeEventListener('keydown', onKey, true);
+        backdrop.remove();
+        // Put focus back where it was, or the page is left with focus on <body> and a
+        // keyboard user has to tab in from the top again.
+        if(previouslyFocused && previouslyFocused.focus) {
+          try{ previouslyFocused.focus(); }catch(e){}
+        }
+        resolve(result);
+      }
+
+      // Clearing the nudge the moment a box is ticked matters more than it looks: the
+      // outline is the only thing on screen saying what is wrong, and leaving it up on a
+      // box that has since been ticked is worse than never showing it.
+      boxes.forEach(b => b.addEventListener('change', () => {
+        if(b.checked) b.closest('.consent-row').classList.remove('is-missing');
+        if(boxes.every(x => x.checked)) hint.classList.remove('is-shown');
+      }));
+
+      backdrop.querySelector('#consentAccept').addEventListener('click', () => {
+        const missing = boxes.filter(b => !b.checked);
+        if(missing.length){
+          hint.classList.add('is-shown');
+          missing.forEach(b => {
+            const row = b.closest('.consent-row');
+            // Restart the animation rather than let a second click be silent: removing
+            // the class, forcing a reflow and re-adding it is the only reliable way to
+            // replay a CSS animation on an element that already has it.
+            row.classList.remove('is-missing');
+            void row.offsetWidth;
+            row.classList.add('is-missing');
+          });
+          missing[0].focus();
+          return;
+        }
+        // The email-link route collects consent before the account exists -- the link
+        // still has to be followed first. Marking it here and flushing it once there is
+        // a uid to attach it to is what stops that route recording nothing at all.
+        try{ localStorage.setItem(PENDING_CONSENT_KEY, '1'); }catch(e){}
+        close(true);
+      });
+
+      backdrop.querySelector('#consentCancel').addEventListener('click', () => close(false));
+
+      // Clicking the dimmed area backs out, but only when the click started there --
+      // without the target check, releasing the mouse outside the card after selecting
+      // text inside it would close the dialog.
+      backdrop.addEventListener('mousedown', e => { if(e.target === backdrop) close(false); });
+
+      function onKey(e){
+        if(e.key === 'Escape'){ e.preventDefault(); close(false); return; }
+        if(e.key !== 'Tab') return;
+        // Keep focus inside the dialog. Without this, tabbing past the last button lands
+        // on the sign-in form behind the backdrop, which is still fully interactive.
+        const focusable = backdrop.querySelectorAll('a[href], button, input[type="checkbox"]');
+        if(!focusable.length) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      }
+      document.addEventListener('keydown', onKey, true);
+    });
+  }
+
+  // Written after the account exists, because there is nowhere to put it before then.
+  // Merged rather than set, so it cannot clobber a profile write racing alongside it,
+  // and fire-and-forget, because a failed consent write must not strand someone who has
+  // just successfully created an account.
+  function recordConsent(uid){
+    try{ localStorage.removeItem(PENDING_CONSENT_KEY); }catch(e){}
+    if(!db || !uid) return;
+    db.collection('users').doc(uid).set({
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      termsAcceptedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(err => console.error('Consent record failed:', err));
+  }
+
+  // Writes a consent that was agreed to earlier in this browser but had no account to
+  // attach itself to at the time. No marker means nothing to flush, so this is safe to
+  // call on any successful sign-in.
+  function flushPendingConsent(uid){
+    let pending = false;
+    try{ pending = localStorage.getItem(PENDING_CONSENT_KEY) === '1'; }catch(e){}
+    if(pending) recordConsent(uid);
+  }
+
   const GOOGLE_ICON_SVG = `<svg viewBox="0 0 18 18">
     <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.617z"/>
     <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
@@ -2486,7 +2697,14 @@ window.Neurova = window.Neurova || {};
     <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
   </svg>`;
 
-  async function signInWithGoogle(){
+  // isSigningUp is passed by the caller rather than read from authMode, because the same
+  // Google button appears on the log-in screen, where consent was given long ago and
+  // asking again would be noise.
+  async function signInWithGoogle(isSigningUp){
+    if(isSigningUp){
+      const agreed = await requireConsent();
+      if(!agreed) return;
+    }
     authError = '';
     authBusy = true;
     renderAccountPanel();
@@ -2500,6 +2718,10 @@ window.Neurova = window.Neurova || {};
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true }).catch(err => console.error('Profile write failed:', err));
       }
+      // Google's popup is the one route where a brand-new account and a returning one
+      // are indistinguishable from here, so the record is written whenever consent was
+      // actually collected -- which is exactly when isSigningUp is true.
+      if(isSigningUp && result.user) recordConsent(result.user.uid);
       // onAuthStateChanged will re-render on success
     } catch(err){
       authBusy = false;
@@ -2532,12 +2754,28 @@ window.Neurova = window.Neurova || {};
   // tied closely enough to the click that started it.
   let cachedProfile = null;
 
-  function buildExportBlob(){
+  function buildExportBlob(sessions){
     const exportObj = {
       email: currentUser.email,
       name: currentUser.displayName || (cachedProfile && cachedProfile.name) || null,
       memberSince: memberSinceText() || null,
       calibrationBaselineOhms: (cachedProfile && typeof cachedProfile.calibrationBaseline === 'number') ? cachedProfile.calibrationBaseline : null,
+      termsVersion: (cachedProfile && cachedProfile.termsVersion) || null,
+      privacyVersion: (cachedProfile && cachedProfile.privacyVersion) || null,
+      // The session history is the part of the account anyone would actually want back,
+      // and for a long time it was the one part the export left out. null rather than []
+      // when the read failed, so an export cannot quietly imply an empty history.
+      sessions: Array.isArray(sessions)
+        ? sessions.map(ses => {
+            const out = Object.assign({}, ses);
+            // A Firestore Timestamp does not survive JSON.stringify as anything useful,
+            // and atMs is already the same instant in a portable form.
+            delete out.at;
+            if(typeof out.atMs === 'number') out.takenAt = new Date(out.atMs).toISOString();
+            return out;
+          })
+        : null,
+      sessionCount: Array.isArray(sessions) ? sessions.length : null,
       exportedAt: new Date().toISOString()
     };
     return new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
@@ -2574,25 +2812,29 @@ window.Neurova = window.Neurova || {};
   }
 
   async function exportMyData(){
-    // Common case: we already have a cached profile (login always fetches one), so this
-    // is fully synchronous and the download fires in the same tick as the click.
-    if(cachedProfile !== null){
-      await triggerDownload(buildExportBlob(), 'neurova-account-data.json');
-      return;
-    }
-    // Rare fallback: nothing cached yet (e.g. clicked right after login before the
-    // background fetch resolved) — fetch once, cache it, then download.
+    // The session history always needs a fetch, so unlike before there is no synchronous
+    // path -- the button goes busy every time. That is the right trade for an export that
+    // actually contains the history.
     const btn = document.getElementById('exportDataBtn');
     exportBusy = true;
     if(btn){ btn.disabled = true; btn.textContent = 'Preparing export…'; }
     try{
-      if(db && currentUser){
-        const snap = await db.collection('users').doc(currentUser.uid).get();
-        cachedProfile = snap.exists ? snap.data() : {};
-      } else {
-        cachedProfile = {};
+      if(cachedProfile === null){
+        if(db && currentUser){
+          const snap = await db.collection('users').doc(currentUser.uid).get();
+          cachedProfile = snap.exists ? snap.data() : {};
+        } else {
+          cachedProfile = {};
+        }
       }
-      await triggerDownload(buildExportBlob(), 'neurova-account-data.json');
+      // Null, not [], if this fails: see buildExportBlob. Asking for far more than the
+      // chart does, because an export should be everything rather than a recent window.
+      let sessions = null;
+      try{
+        if(window.Neurova.loadSessions) sessions = await window.Neurova.loadSessions(5000);
+      }catch(e){ console.error('Session history unavailable for export:', e); }
+
+      await triggerDownload(buildExportBlob(sessions), 'neurova-account-data.json');
     }catch(e){
       console.error('Export failed:', e);
       deleteError = ''; // unrelated field, just being explicit we're not touching it
@@ -2622,9 +2864,37 @@ window.Neurova = window.Neurova || {};
   }
   const NETWORK_TIMEOUT_MS = 12000;
 
+  // Firestore does not cascade. Deleting users/{uid} leaves users/{uid}/sessions/* fully
+  // intact -- the documents simply stop having a reachable parent, which from the owner's
+  // side is indistinguishable from deletion and from the database's side is not deletion
+  // at all. Every session therefore has to be removed by hand, before the parent goes.
+  //
+  // Batched 300 at a time (the server limit is 500) and looped, because a history built
+  // up over months of daily tests will not come back in one page.
+  async function deleteSessionHistory(uid){
+    if(!db || !uid) return;
+    const sessions = db.collection('users').doc(uid).collection('sessions');
+    for(;;){
+      const snap = await withTimeout(sessions.limit(300).get(), NETWORK_TIMEOUT_MS);
+      if(snap.empty) return;
+      const batch = db.batch();
+      snap.forEach(doc => batch.delete(doc.ref));
+      await withTimeout(batch.commit(), NETWORK_TIMEOUT_MS);
+      // A short page means that was the last of them. Checking this rather than looping
+      // until empty saves one round trip on the common case of a handful of sessions.
+      if(snap.size < 300) return;
+    }
+  }
+
   async function deleteAccountData(){
     if(db && currentUser){
-      try{ await withTimeout(db.collection('users').doc(currentUser.uid).delete(), NETWORK_TIMEOUT_MS); }
+      const uid = currentUser.uid;
+      // Order matters. The auth account is deleted last, because the security rules
+      // allow these writes only while its owner is signed in -- drop the account first
+      // and the sessions become permanently undeletable by anyone but an administrator.
+      try{ await deleteSessionHistory(uid); }
+      catch(e){ console.error('Deleting session history failed or timed out:', e); }
+      try{ await withTimeout(db.collection('users').doc(uid).delete(), NETWORK_TIMEOUT_MS); }
       catch(e){ console.error('Deleting profile doc failed or timed out:', e); }
     }
     await withTimeout(currentUser.delete(), NETWORK_TIMEOUT_MS);
@@ -3010,11 +3280,13 @@ window.Neurova = window.Neurova || {};
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true }).catch(err => console.error('Profile write failed:', err));
         }
+        flushPendingConsent(currentUser.uid);
         currentUser = auth.currentUser;
         onboardStep = 0;
         authBusy = false;
         renderAccountPanel();
         renderDataAuthBanner();
+        renderGuestUpsells();
         // Onboarding done — hand them the site.
         if(window.Neurova.goToPage) window.Neurova.goToPage('home');
         return;
@@ -3056,7 +3328,14 @@ window.Neurova = window.Neurova || {};
           <button type="button" class="auth-linkish" id="guestSignInBtn" ${authBusy ? 'disabled' : ''}>Continue as a guest</button>
         </div>`);
       document.getElementById('guestSignInBtn').addEventListener('click', signInAsGuest);
-      document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+      // The link screen cannot tell a new account from a returning one -- the same email
+      // does both jobs. A browser that has never held an account is treated as a sign-up,
+      // which is the same signal routeOnFirstResolve uses to pick its opening mode.
+      // Passing the handler directly would hand the click Event in as isSigningUp, and an
+      // Event is truthy, so every log-in would raise the dialog too.
+      const linkIsSignup = !hasAccountBefore();
+      document.getElementById('googleSignInBtn')
+        .addEventListener('click', () => signInWithGoogle(linkIsSignup));
       document.getElementById('usePasswordBtn').addEventListener('click', () => {
         usePasswordFallback = true;
         authError = '';
@@ -3070,6 +3349,13 @@ window.Neurova = window.Neurova || {};
       document.getElementById('linkForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('linkEmail').value.trim();
+        // Consent before the link is sent, not after it is followed. The link can land in
+        // a different browser from the one it was requested in, and a dialog raised there
+        // would be asking someone to agree to terms in the middle of an email click.
+        if(linkIsSignup){
+          const agreed = await requireConsent();
+          if(!agreed) return;
+        }
         authBusy = true; authError = ''; renderAccountPanel();
         try{
           await sendSignInLink(email);
@@ -3143,13 +3429,23 @@ window.Neurova = window.Neurova || {};
       renderLoggedOutForm();
     });
 
-    document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+    document.getElementById('googleSignInBtn')
+      .addEventListener('click', () => signInWithGoogle(isSignup));
 
     document.getElementById('authForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = isSignup ? document.getElementById('authName').value.trim() : '';
       const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
+
+      // Raised here rather than on the button, so the browser's own required-field and
+      // email-format validation has already run. Being asked to accept terms and only
+      // then told the password is too short would be the wrong order.
+      if(isSignup){
+        const agreed = await requireConsent();
+        if(!agreed) return;
+      }
+
       authError = '';
       authBusy = true;
       renderLoggedOutForm();
@@ -3163,11 +3459,15 @@ window.Neurova = window.Neurova || {};
               db.collection('users').doc(cred.user.uid).set({
                 email: cred.user.email,
                 name: name,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                termsVersion: TERMS_VERSION,
+                privacyVersion: PRIVACY_VERSION,
+                termsAcceptedAt: firebase.firestore.FieldValue.serverTimestamp()
               }, { merge: true }).catch(err => console.error('Profile write failed:', err));
             }
             renderAccountPanel();
             renderDataAuthBanner();
+            renderGuestUpsells();
           }
         } else {
           await auth.signInWithEmailAndPassword(email, password);
@@ -3195,6 +3495,43 @@ window.Neurova = window.Neurova || {};
     return renderLoggedOutForm();
   }
 
+  // ---------------- guest upsell ----------------
+  //
+  // Driven from the markup rather than from a list in here: any element carrying
+  // data-upsell becomes a prompt, with the attribute's value as the sentence. Adding one
+  // to a new page is then a line of HTML, and the wording for each page lives next to the
+  // thing it is talking about.
+  //
+  // Anyone without a real account: guests and signed-out visitors alike, since both can
+  // browse the whole site. Someone who already has an account never sees these -- a
+  // prompt shown to a person who has already done the thing is how a prompt becomes
+  // wallpaper.
+  function renderGuestUpsells(){
+    const slots = document.querySelectorAll('[data-upsell]');
+    if(!slots.length) return;
+    const guest = isGuest();
+    const show = firebaseReady && (guest || !currentUser);
+    const lead = guest ? "You're a guest." : "You're not signed in.";
+    slots.forEach(slot => {
+      if(!show){ slot.innerHTML = ''; return; }
+      // The two states are not the same and must not claim to be: a guest's results are
+      // saved to an anonymous account, a signed-out visitor's are not saved at all.
+      // data-upsell-out carries the signed-out wording where that distinction matters.
+      const msg = (!guest && slot.getAttribute('data-upsell-out'))
+        || slot.getAttribute('data-upsell') || '';
+      const soft = slot.hasAttribute('data-upsell-soft') ? ' is-soft' : '';
+      slot.innerHTML = `<div class="upsell${soft}"><span><strong>${lead}</strong> ${msg}</span><a role="button" tabindex="0">Create an account</a></div>`;
+      const link = slot.querySelector('a');
+      if(!link) return;
+      const go = (e) => {
+        e.preventDefault();
+        if(window.Neurova.goToPage) window.Neurova.goToPage('account');
+      };
+      link.addEventListener('click', go);
+      link.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') go(e); });
+    });
+  }
+
   function renderDataAuthBanner(){
     if(!dataAuthBanner) return;
     if(!firebaseReady){ dataAuthBanner.innerHTML = ''; return; }
@@ -3202,7 +3539,7 @@ window.Neurova = window.Neurova || {};
       // Worth its own line rather than "Signed in as Guest": a guest's data does not
       // follow them anywhere, which is the thing they need to know on a page about
       // history.
-      dataAuthBanner.innerHTML = `<div class="data-auth-banner"><span>Browsing as a guest — anything saved stays in this browser.</span><a href="#account" data-nav="account">Create an account</a></div>`;
+      dataAuthBanner.innerHTML = `<div class="data-auth-banner"><span>Browsing as a guest — this history lives in this browser only. It won't follow you to another device, and clearing your browser erases it for good.</span><a href="#account" data-nav="account">Create an account</a></div>`;
       const gLink = dataAuthBanner.querySelector('a[data-nav]');
       if(gLink) gLink.addEventListener('click', (e) => {
         e.preventDefault();
@@ -3231,6 +3568,7 @@ window.Neurova = window.Neurova || {};
       authBusy = false;
       renderAccountPanel();
       renderDataAuthBanner();
+      renderGuestUpsells();
       if(window.Neurova.onAccountChange) window.Neurova.onAccountChange();
       // See resetCalibration's comment: only the "was a guest, now signing into a
       // brand-new account" transition gets to keep a just-measured baseline.
@@ -3249,18 +3587,21 @@ window.Neurova = window.Neurova || {};
           routeOnFirstResolve(user);
         }).catch(() => routeOnFirstResolve(user));
       } else if(user){
-        rememberHasAccount();
+        if(!user.isAnonymous) rememberHasAccount();
         // They only landed on this page because they were signed out. Now that they are
-        // not, hand them the site rather than leaving them staring at the account page.
+        // not, finish the journey the gate interrupted -- back to the page they actually
+        // asked for, or Home if they came in through the front door.
         if(sentToSignIn){
           sentToSignIn = false;
-          if(window.Neurova.goToPage) window.Neurova.goToPage('home');
+          const dest = window.Neurova.takeDestination ? window.Neurova.takeDestination() : null;
+          if(window.Neurova.goToPage) window.Neurova.goToPage(dest || 'home');
         }
       }
     });
   } else {
     renderAccountPanel();
     renderDataAuthBanner();
+    renderGuestUpsells();
     revealSite();
   }
 

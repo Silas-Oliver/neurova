@@ -31,9 +31,24 @@
 </script>
 <script>
 (function(){
-  var SITE_VERSION = '20261117-51';
+  var SITE_VERSION = '20261117-56';
   try{
-    var remembered = localStorage.getItem('neurovaSiteVersion');
+    // An explicit ?view= in the address overrides, and replaces, whatever was stored.
+    // Without this the stored preference is a one-way door: it is written only by the
+    // two footer links, it is consulted before any device detection, so a stale 'mobile'
+    // outranks a desktop monitor for ever -- and the link that would undo it lives in a
+    // footer that the sign-in screen hides. Anyone who ended up on the wrong layout and
+    // was not signed in had no way back at all. ?view=desktop is that way back.
+    var forced = null;
+    try{
+      var m = /[?&]view=(desktop|mobile)\b/.exec(window.location.search);
+      if(m) forced = m[1];
+    }catch(e){}
+    if(forced){
+      try{ localStorage.setItem('neurovaSiteVersion', forced); }catch(e){}
+    }
+
+    var remembered = forced || localStorage.getItem('neurovaSiteVersion');
     var target;
     if(remembered === 'desktop' || remembered === 'mobile'){
       target = remembered + '.html';
@@ -56,9 +71,15 @@
     // Bumping ?v= on a release changes the URL, which is the only thing that reliably
     // busts a cached HTML page -- the asset version inside it can only bust the CSS and
     // JS it links to, never the page holding those links.
-    location.replace(target + '?v=' + SITE_VERSION);
+    //
+    // The hash has to be carried across by hand. It is not part of what gets replaced
+    // here, so without this line every deep link into the site -- neurovatech.me/#contact
+    // in an email, #data in a message, the links out of privacy.html -- silently landed
+    // on the home page, because the redirect dropped the one part of the URL saying
+    // where to go.
+    location.replace(target + '?v=' + SITE_VERSION + (window.location.hash || ''));
   } catch(e){
-    location.replace('desktop.html?v=' + SITE_VERSION);
+    location.replace('desktop.html?v=' + SITE_VERSION + (window.location.hash || ''));
   }
 })();
 </script>

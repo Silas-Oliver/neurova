@@ -31,7 +31,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261117-51">
+<link rel="stylesheet" href="shared.css?v=20261117-56">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -238,6 +238,12 @@
         <h1>Your Hand Recovers.<br><span class="muted-line">The Glove Proves It.</span></h1>
         <p class="ec-intro-lead">Everything here reads live off the hand you're wearing it on.</p>
       </div>
+
+      <!-- Filled by renderGuestUpsells() when, and only when, the visitor is a guest.
+           Empty for everyone else, including signed-out visitors, who cannot reach
+           this page at all. -->
+      <div data-upsell="Tests you run will save, but only into this browser — they can't follow you to a phone or a second computer."
+           data-upsell-out="Nothing you run here will be saved. Sign in first if you want to keep the result."></div>
 
       <div class="mobile-hardware-explainer">
         <h3>This part needs a laptop</h3>
@@ -521,6 +527,8 @@
         <p>A wearable peripheral nerve recovery tracking glove, built as a hands-on science and engineering project with a real-world medical application in mind.</p>
       </div>
 
+      <div data-upsell-soft data-upsell="Nothing on this page needs an account — but keeping a baseline across devices does."></div>
+
       <div class="specs">
         <div style="background:var(--panel); padding:22px;">
           <h3 style="margin-top:0;">EMG sensing</h3>
@@ -616,6 +624,7 @@
 
   <footer>
     Readings stay in this tab unless you sign in to save them. Requires Chrome or Edge on desktop for the connect button to work.
+    <span class="footer-sep">&middot;</span><a href="privacy.html">Privacy</a><span class="footer-sep">&middot;</span><a href="terms.html">Terms</a>
   </footer>
   <div class="version-switch"><a href="mobile.html" onclick="setNeurovaVersion('mobile')">Switch to mobile version</a></div>
 
@@ -626,6 +635,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261117-51"></script>
+<script src="shared.js?v=20261117-56"></script>
 </body>
 </html>

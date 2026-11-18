@@ -191,8 +191,31 @@
   body.auth-fullscreen.on-account .topbar,
   body.auth-fullscreen.on-account .site-header,
   body.auth-fullscreen.on-account .mobile-nav-panel,
-  body.auth-fullscreen.on-account .version-switch,
   body.auth-fullscreen.on-account footer{display:none !important;}
+
+  /* The version switch stays, because this screen is now where every signed-out visitor
+     lands, and it is the only control that undoes a wrong desktop/mobile choice. Hiding
+     it here meant someone on the wrong layout and not signed in was simply stuck.
+     It was originally hidden along with the rest of the chrome for a real reason -- it
+     sits outside the footer, and .auth-split is min-height:100vh, so anything following
+     it in flow pushed the sign-in card 28px off the bottom of the screen. Taking it out
+     of flow keeps it reachable without costing those 28px. */
+  body.auth-fullscreen.on-account .version-switch{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    margin:0; padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+    text-align:center; font-size:12px;
+    background:linear-gradient(to top, var(--bg) 60%, rgba(244,246,244,0));
+    pointer-events:none;
+  }
+  body.auth-fullscreen.on-account .version-switch a{pointer-events:auto;}
+  /* Clearance so the fixed bar above cannot sit on top of the last control in the card.
+     On a 640px-tall phone it was covering "Continue as a guest" exactly. The card is
+     min-height:100vh, so this makes the screen scroll by the height of the bar rather
+     than shrinking the card -- which is the right trade: a short scroll is recoverable,
+     a button hidden under a fixed bar is not. */
+  body.auth-fullscreen.on-account .auth-split{
+    padding-bottom:calc(46px + env(safe-area-inset-bottom));
+  }
   body.auth-fullscreen.on-account{background:var(--bg);}
   body.auth-fullscreen.on-account #page-account section{padding:0;}
   /* Every .wrap in the chain, not just the one inside the page: the site's outer
@@ -598,6 +621,9 @@
   .spec .v{font-size:18px; margin-top:8px;}
 
   footer{padding:40px 0 64px; color:var(--muted); font-size:13px; border-top:1px solid var(--line);}
+  footer a{color:var(--muted); text-decoration:underline; text-decoration-color:var(--line-strong);}
+  footer a:hover{color:var(--ink);}
+  .footer-sep{margin:0 8px; color:var(--line-strong);}
 
   /* ---------- hamburger + mobile nav panel ---------- */
   .hamburger{
@@ -1939,3 +1965,108 @@
   .ec-show-body h2{ margin:0; }
   .ec-show-dots{ margin-top:28px; }
   .ec-show .pill{ pointer-events:none; }
+
+  /* ---------- consent modal ---------- */
+  /*
+     Shown when someone commits to creating an account -- not on log in, where the
+     agreement was already given, and never on guest sign-in, which creates no
+     identifiable record to agree about.
+
+     The frame deliberately copies .auth-card rather than inventing a second card style:
+     this appears directly over that card, and two different panel treatments a few pixels
+     apart would read as two different products.
+  */
+  .consent-backdrop{
+    position:fixed; inset:0; z-index:200;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+    background:rgba(28,43,39,0.42);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    animation:consentFade 180ms ease-out;
+  }
+  @keyframes consentFade{ from{opacity:0;} to{opacity:1;} }
+
+  .consent-modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);
+    padding:28px; text-align:left;
+    width:100%; max-width:440px;
+    max-height:calc(100vh - 48px); overflow-y:auto;
+    animation:consentRise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes consentRise{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce){
+    .consent-backdrop, .consent-modal{animation:none;}
+  }
+
+  .consent-modal h3{font-size:19px; margin:0 0 8px;}
+  .consent-sub{color:var(--muted); font-size:14px; margin:0 0 20px;}
+
+  /* The whole row is the label, so the text is part of the hit target and not just the
+     12px box -- except the two links, which have to stay independently clickable. */
+  .consent-row{
+    display:flex; align-items:flex-start; gap:11px;
+    padding:12px; margin:0 0 10px;
+    border:1px solid var(--line); border-radius:var(--radius);
+    cursor:pointer; transition:border-color 140ms ease, background 140ms ease;
+  }
+  .consent-row:hover{background:var(--bg);}
+  .consent-row input[type="checkbox"]{
+    flex:none; width:17px; height:17px; margin:1px 0 0;
+    accent-color:var(--primary); cursor:pointer;
+  }
+  .consent-row span{font-size:14px; color:var(--ink); line-height:1.5;}
+  .consent-row a{color:var(--primary); font-weight:500; text-decoration:underline;}
+  .consent-row a:hover{color:var(--ink);}
+
+  /* The nudge for an unticked box. Deliberately a slow fade rather than a shake: the
+     person has not done anything wrong, they have just not finished yet, and a shake
+     reads as an error. The ring is painted with box-shadow so adding it cannot shift
+     the row by a pixel the way a thicker border would. */
+  .consent-row.is-missing{border-color:var(--warn);}
+  .consent-row.is-missing::after{content:none;}
+  @keyframes consentNudge{
+    from{box-shadow:0 0 0 0 rgba(217,138,61,0);}
+    to{box-shadow:0 0 0 3px rgba(217,138,61,0.22);}
+  }
+  .consent-row.is-missing{
+    animation:consentNudge 420ms ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .consent-row.is-missing{animation:none; box-shadow:0 0 0 3px rgba(217,138,61,0.22);}
+  }
+
+  .consent-hint{
+    color:var(--warn); font-size:13px; margin:2px 0 0; min-height:18px;
+    opacity:0; transition:opacity 220ms ease;
+  }
+  .consent-hint.is-shown{opacity:1;}
+
+  .consent-actions{display:flex; flex-direction:column; gap:9px; margin-top:18px;}
+  .consent-actions .btn{width:100%; justify-content:center; padding:12px 16px; font-size:15px;}
+
+  @media (max-width:420px){
+    .consent-modal{padding:22px;}
+  }
+
+  /* ---------- guest / signed-out upsell ---------- */
+  /*
+     One treatment reused everywhere a limitation is worth naming, so the prompt reads as
+     the same voice each time rather than as several unrelated warnings.
+  */
+  .upsell{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    background:var(--panel); border:1px solid var(--line);
+    border-left:3px solid var(--primary);
+    border-radius:var(--radius);
+    padding:12px 15px; margin:0 0 18px;
+    font-size:14px; color:var(--muted);
+  }
+  .upsell strong{color:var(--ink); font-weight:600;}
+  .upsell span{flex:1 1 220px; min-width:0; line-height:1.5;}
+  .upsell a{
+    flex:none; color:var(--primary); font-weight:600; text-decoration:underline;
+    cursor:pointer; white-space:nowrap;
+  }
+  .upsell a:hover{color:var(--ink);}
+  .upsell.is-soft{border-left-color:var(--line-strong);}

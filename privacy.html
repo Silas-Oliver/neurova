@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy — Neurova</title>
+<meta name="description" content="What the Neurova site and Reach app collect, where it goes, and how to get it back or delete it.">
+<link rel="icon" href="favicon-96x96.png" type="image/x-icon">
+<meta name="theme-color" content="#f4f6f4">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=20261117-56">
+<!-- Standalone, and deliberately so. This page loads no Firebase, no shared.js and no
+     service worker: it is the page an app store reviewer, a parent or a teacher opens
+     cold, possibly before they trust the site at all, and it should render from HTML and
+     CSS alone with nothing phoning home. It is also why this is its own file rather than
+     another hash-routed section -- index.html redirects by device and drops the hash on
+     the way, so a /#privacy link would quietly land on the home page instead. -->
+<link rel="stylesheet" href="legal.css?v=20261117-56">
+</head>
+<body>
+
+<div class="site-header">
+  <div class="topbar">
+    <a class="brand" href="./" style="text-decoration:none; color:inherit;">
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none">
+        <circle cx="6" cy="12" r="3" stroke="#2f6e63" stroke-width="1.6"/>
+        <circle cx="18" cy="12" r="3" stroke="#2f6e63" stroke-width="1.6"/>
+        <path d="M9 12H15" stroke="#2f6e63" stroke-width="1.6"/>
+      </svg>
+      Neurova
+    </a>
+    <div class="topbar-right">
+      <a href="./" style="color:var(--muted); font-size:14px; text-decoration:none;">Back to the site</a>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<div class="legal-wrap legal-head">
+  <h1>Privacy</h1>
+  <p class="legal-date">Last updated 17 November 2026</p>
+  <p class="legal-lede">
+    Neurova is a student engineering project, built and run by one person. There are no
+    advertisers, no analytics, and nothing here is sold or shared with anyone. This page
+    says exactly what is collected, where it goes, and how to get it back or delete it.
+  </p>
+</div>
+
+<div class="legal-wrap legal-body">
+
+  <h2>The short version</h2>
+  <p>
+    You can use almost all of this without giving anything up. Readings taken from the
+    glove stay in the browser tab they were taken in and are never uploaded unless you
+    sign in and save them. Signing in is optional. The only things that ever leave your
+    device are the ones listed below.
+  </p>
+  <div class="legal-note">
+    <p>
+      <strong>No tracking of any kind.</strong> No analytics, no advertising, no tracking
+      pixels, no third-party cookies, no profiling, and nothing that follows you to other
+      sites. None of that code exists in this project — not disabled, not configured off,
+      simply never added.
+    </p>
+  </div>
+
+  <h2>Readings from the glove</h2>
+  <p>
+    The glove connects straight to your browser over USB or Bluetooth. Measurements travel
+    from the board to the page in front of you and go nowhere else. If you are not signed
+    in, closing or reloading the tab discards them and no copy exists anywhere.
+  </p>
+  <p>
+    If you <em>are</em> signed in, a record of each calibration and each contact test is
+    saved to your account so the Data page can show a trend over time. That record holds
+    the electrical measurement and nothing else about you:
+  </p>
+  <ul>
+    <li>Which kind of session it was — a calibration or a contact test</li>
+    <li>The baseline resistance in ohms, and whether it was measured fresh or restored from your account</li>
+    <li>For a contact test: the verdict, the count of good, poor and failed samples, and the average resistance</li>
+    <li>The two circuit constants of the board it was taken on, so a later resistor swap cannot silently corrupt the trend</li>
+    <li>The date and time it was taken</li>
+  </ul>
+  <p>
+    These are resistance values read through surface electrodes — a measure of how well the
+    contacts are sitting against skin. There is no recording, no image, no location, and
+    nothing that identifies you physically.
+  </p>
+
+  <h2>Your account, if you make one</h2>
+  <p>
+    Accounts exist for one reason: so a baseline and a session history can follow you
+    between devices. You can sign in four ways — with Google, with an email address and a
+    password, with a one-time link sent to your email, or as a guest.
+  </p>
+  <h3>Signing in normally</h3>
+  <p>
+    Stored against your account: your email address, the display name you choose, and your
+    calibration baseline. If you set a password, it is handled entirely by Google's
+    authentication service and stored only as a hash — it is never visible to this project
+    or to me.
+  </p>
+  <h3>Signing in as a guest</h3>
+  <p>
+    Guest sign-in creates an account with no email address and no name attached. Sessions
+    you log are stored against an anonymous identifier held in your browser, which means
+    two things worth knowing: nobody, including me, can connect that data to you — and if
+    you clear your browser's storage, the identifier is lost and that history can no longer
+    be reached, including by you. Guest sign-in is meant for trying the app, not for
+    keeping anything.
+  </p>
+
+  <h2>The contact form</h2>
+  <p>
+    When you send a message, three fields are submitted: your name, the return address you
+    give, and the message itself. Each submission goes two places at once — to a database
+    record and to a mailbox I read myself — because a single route can fail silently and a
+    message that quietly vanishes is worse than one that bounces.
+  </p>
+  <p>
+    Your return address is used to reply to you and for nothing else. It is not added to a
+    mailing list, because there is no mailing list. The form also carries a hidden field
+    that only an automated script would fill in; when that happens the submission is
+    discarded on the spot and neither stored nor emailed.
+  </p>
+
+  <h2>Stored on your device</h2>
+  <p>
+    A few small values are kept in your browser's own storage and are never transmitted:
+  </p>
+  <ul>
+    <li>Whether you chose the desktop or mobile version of the site</li>
+    <li>A flag noting that an account has been used in this browser, so the sign-in screen opens on the right form</li>
+    <li>Your email address, briefly, while a one-time sign-in link is being completed — then removed</li>
+    <li>A cached copy of the site's own files, so it still opens without a connection</li>
+  </ul>
+  <p>
+    Google's authentication service also keeps a sign-in token in browser storage while you
+    are logged in. That is what signing out clears.
+  </p>
+
+  <h2>Services this site relies on</h2>
+  <p>
+    I run no servers of my own. Four outside services are involved, and because every one
+    of them is contacted directly by your browser, each necessarily sees your IP address —
+    that is simply how loading a web page works, and it is true of every site you visit.
+  </p>
+  <ul>
+    <li><strong>GitHub Pages</strong> — hosts and serves the site's files.</li>
+    <li><strong>Google Firebase</strong> — provides sign-in and the database holding accounts, baselines and session records.</li>
+    <li><strong>Google Fonts</strong> — serves the two typefaces the site is set in.</li>
+    <li><strong>Web3Forms</strong> — delivers contact form messages to my mailbox. Contacted only when you press send.</li>
+  </ul>
+  <p>
+    Each of these is a processor acting on this project's behalf, under its own privacy
+    terms. None of them is given your data for their own purposes by me, and no data is
+    ever sold, rented or traded.
+  </p>
+
+  <h2>Who can see your data</h2>
+  <p>
+    Database rules restrict every account's records so that only the signed-in owner of an
+    account can read or write them. One person's baseline and history are not readable by
+    another person using the app. As the project's administrator I can see the contents of
+    the database, which means I can in principle open an account's session records; in
+    practice I have no reason to and do not. Contact form messages I do read, since
+    answering them is the point.
+  </p>
+
+  <h2>How long things are kept</h2>
+  <p>
+    Account data and session records are kept until you delete them — there is no automatic
+    expiry, because a recovery trend is only useful over months. Contact form messages are
+    kept so I can follow up on a conversation. Ask and I will delete yours.
+  </p>
+
+  <h2>Getting your data, and deleting it</h2>
+  <p>
+    Both live on the Account page, available to anyone signed in, with no need to ask me
+    first:
+  </p>
+  <ul>
+    <li><strong>Export my data</strong> downloads a JSON file holding your account details, your saved calibration baseline, and every session you have logged, each with its date.</li>
+    <li><strong>Delete my account</strong> removes your session history, then your profile record, then the account itself, and signs you out. It cannot be undone.</li>
+  </ul>
+  <p>
+    Deletion is done in that order deliberately. A database of this kind does not remove
+    records beneath a deleted account automatically — they survive their own parent — so
+    the history is cleared first, while the account still exists and has permission to
+    clear it. The result is that pressing the button genuinely empties the account rather
+    than only detaching it.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    This project is not aimed at children and I do not knowingly collect anything from a
+    child under 13. If you believe a child has created an account here, get in touch and I
+    will remove it.
+  </p>
+
+  <h2>Security, honestly stated</h2>
+  <p>
+    Sign-in, password handling and database access control are all Google's implementation
+    rather than mine, which is deliberate — they are far better at it than a solo project
+    would be. Everything is served over HTTPS. That said, this is a student project without
+    a security audit behind it, so the sensible advice is the ordinary advice: use a
+    password you do not reuse elsewhere, and do not put anything in the contact form you
+    would not want sitting in an inbox.
+  </p>
+
+  <h2>What this is not</h2>
+  <p>
+    Neurova Reach is a research and engineering project. It is not a medical device, it is
+    not cleared or approved by any regulator, and nothing it reports should be used to make
+    a decision about anyone's health or treatment. It measures electrode contact quality;
+    interpreting recovery is a clinician's job.
+  </p>
+
+  <h2>Changes to this page</h2>
+  <p>
+    If what the project collects changes, this page changes with it and the date at the top
+    is updated. The project's full history is public, so every revision of this page can be
+    read in the repository it is served from.
+  </p>
+
+  <h2>Questions</h2>
+  <p>
+    Anything on this page, or any request about your own data, goes through the
+    <a href="./#contact">contact form</a> on the site. Messages reach me directly and I answer them
+    myself.
+  </p>
+
+</div>
+
+<div class="legal-wrap legal-foot">
+  Neurova Reach &mdash; a peripheral nerve recovery tracking glove.
+  <a href="terms.html" style="color:var(--primary);">Terms</a> &middot;
+  <a href="./" style="color:var(--primary);">Back to the site</a>
+</div>
+
+</main>
+
+</body>
+</html>

@@ -38,9 +38,67 @@ window.Neurova = window.Neurova || {};
   window.Neurova.rememberDestination = rememberDestination;
   window.Neurova.takeDestination = takeDestination;
 
+  // ---------------- motion helpers ----------------
+  //
+  // Replays the CSS entrance on an element whose text was just rewritten. Changing
+  // textContent does not restart an animation -- the node is the same node -- so the
+  // class is removed, a reflow is forced to flush that removal, and it goes back on.
+  // Reading offsetWidth is what makes this work; without it the browser coalesces the
+  // remove and the add into no change at all.
+  //
+  // Skipped outright under reduced motion: the global CSS rule already collapses the
+  // duration, but adding and removing classes on every live reading is pointless work
+  // for someone who has asked not to see it.
+  const prefersReducedMotion = window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function replayLanding(el){
+    if(!el || prefersReducedMotion) return;
+    el.classList.remove('did-land');
+    void el.offsetWidth;
+    el.classList.add('did-land');
+  }
+  window.Neurova.replayLanding = replayLanding;
+
+  // Points a panel's transform-origin at whatever opened it, so it grows out of its
+  // own trigger. Falls back to the element's middle when there is no trigger to read,
+  // which is also what the CSS does if this never runs.
+  function setGrowOrigin(panel, trigger){
+    if(!panel) return;
+    if(!trigger || prefersReducedMotion){
+      panel.style.removeProperty('--ox');
+      panel.style.removeProperty('--oy');
+      return;
+    }
+    const p = panel.getBoundingClientRect();
+    const t = trigger.getBoundingClientRect();
+    // offsetWidth/Height rather than the rect's: the panel may already be scaled by
+    // its own entrance, and a scaled rect would put the origin a few pixels adrift
+    // and make the panel visibly slide as it grows.
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    const left = p.left + (p.width - pw) / 2;
+    const top = p.top + (p.height - ph) / 2;
+    panel.style.setProperty('--ox', ((t.left + t.width / 2) - left) + 'px');
+    panel.style.setProperty('--oy', ((t.top + t.height / 2) - top) + 'px');
+  }
+  window.Neurova.setGrowOrigin = setGrowOrigin;
+
   function showPage(name){
     if(!PAGES.includes(name)) name = 'home';
-    document.querySelectorAll('.page').forEach(p => p.classList.toggle('page-active', p.dataset.page === name));
+    document.querySelectorAll('.page').forEach(p => {
+      const active = p.dataset.page === name;
+      p.classList.toggle('page-active', active);
+      if(!active){ p.classList.remove('is-entering'); return; }
+      // The entrance is a class the page wears briefly, never its resting state, so a
+      // stalled animation can dim the page for one timeout at worst and never strand
+      // it at opacity zero. Reduced motion skips the whole dance.
+      if(prefersReducedMotion) return;
+      p.classList.remove('is-entering');
+      void p.offsetWidth;          // flush, so re-navigating to the same page replays
+      p.classList.add('is-entering');
+      clearTimeout(p._enterTimer);
+      p._enterTimer = setTimeout(() => p.classList.remove('is-entering'), 400);
+    });
     // The sign-in page takes over the viewport, but only while it is the page on screen —
     // being signed out must not strip the chrome from the rest of the site.
     document.body.classList.toggle('on-account', name === 'account');
@@ -385,6 +443,11 @@ window.Neurova = window.Neurova || {};
       clearHeroReading();
       return;
     }
+    // Every caller of this is a discrete event -- a baseline restored, a calibration
+    // finished, a test finished -- never a streaming tick, so a landing here marks a
+    // real moment rather than flickering on every sample.
+    const card = document.querySelector('.ec-hero-card-read');
+    const prev = card ? card.textContent : null;
     setScopeText('scopeValueLabel', label);
     if(ohms >= 1000){
       setScopeText('scopeValueNum', (Math.round(ohms / 100) / 10).toFixed(1));
@@ -392,6 +455,9 @@ window.Neurova = window.Neurova || {};
     } else {
       setScopeText('scopeValueNum', String(Math.round(ohms)));
       setScopeText('scopeValueUnit', 'Ω');
+    }
+    if(card && card.textContent !== prev && window.Neurova.replayLanding){
+      window.Neurova.replayLanding(card);
     }
   }
 
@@ -1303,14 +1369,20 @@ window.Neurova = window.Neurova || {};
 
   function setVerdict(text, kind, summary){
     const el = document.getElementById('verdictText');
+    const changed = el.textContent !== text;
     el.textContent = text;
+    // Only when it actually changed. Re-rendering the same verdict should not make
+    // the panel twitch.
+    if(changed && window.Neurova.replayLanding) window.Neurova.replayLanding(el);
     el.style.setProperty('--accent', kind === 'good' ? 'var(--good)' : kind === 'warn' ? 'var(--warn)' : kind === 'bad' ? 'var(--bad)' : 'var(--muted)');
     document.getElementById('summaryText').textContent = summary || '';
   }
 
   function setCalibStatus(text, kind, summary){
     const el = document.getElementById('calibStatusText');
+    const changed = el.textContent !== text;
     el.textContent = text;
+    if(changed && window.Neurova.replayLanding) window.Neurova.replayLanding(el);
     el.style.setProperty('--accent', kind === 'good' ? 'var(--good)' : kind === 'warn' ? 'var(--warn)' : 'var(--muted)');
     document.getElementById('calibSummaryText').textContent = summary || '';
   }
@@ -2559,7 +2631,10 @@ window.Neurova = window.Neurova || {};
 
   // Resolves true when both boxes are ticked and the person confirms, false if they back
   // out. Callers await it and simply do nothing on false.
-  function requireConsent(){
+  // trigger is the control that set this off, used only to point the panel's growth
+  // at it. Everything still works when it is omitted -- the panel grows from its own
+  // centre, which is what the CSS falls back to.
+  function requireConsent(trigger){
     if(consentOpen) return Promise.resolve(false);
     consentOpen = true;
 
@@ -2593,6 +2668,12 @@ window.Neurova = window.Neurova || {};
         </div>`;
 
       document.body.appendChild(backdrop);
+
+      // After the append, so the panel has been laid out and has a box to measure --
+      // before it, every rect would be zero and the origin would land in the corner.
+      if(window.Neurova.setGrowOrigin){
+        window.Neurova.setGrowOrigin(backdrop.querySelector('.consent-modal'), trigger);
+      }
 
       const termsBox = backdrop.querySelector('#consentTerms');
       const privacyBox = backdrop.querySelector('#consentPrivacy');
@@ -2701,10 +2782,11 @@ window.Neurova = window.Neurova || {};
   // Google button appears on the log-in screen, where consent was given long ago and
   // asking again would be noise.
   async function signInWithGoogle(isSigningUp){
+    const googleBtn = document.getElementById('googleSignInBtn');
     // Asking up front when the screen is offering to create an account keeps the terms
     // in front of someone before Google's popup appears, which is the right order.
     if(isSigningUp){
-      const agreed = await requireConsent();
+      const agreed = await requireConsent(googleBtn);
       if(!agreed) return;
     }
     authError = '';
@@ -2727,7 +2809,7 @@ window.Neurova = window.Neurova || {};
       // this, which is why it is not simply shown on every Google sign-in.
       const isNew = !!(result.additionalUserInfo && result.additionalUserInfo.isNewUser);
       if(isNew && !isSigningUp){
-        const agreed = await requireConsent();
+        const agreed = await requireConsent(document.getElementById('googleSignInBtn') || googleBtn);
         if(!agreed){
           try{ await result.user.delete(); }
           catch(e){ console.error('Could not undo the new account:', e); try{ await auth.signOut(); }catch(e2){} }
@@ -3376,7 +3458,7 @@ window.Neurova = window.Neurova || {};
         // a different browser from the one it was requested in, and a dialog raised there
         // would be asking someone to agree to terms in the middle of an email click.
         if(linkIsSignup){
-          const agreed = await requireConsent();
+          const agreed = await requireConsent(e.target.querySelector('button[type="submit"]'));
           if(!agreed) return;
         }
         authBusy = true; authError = ''; renderAccountPanel();
@@ -3465,7 +3547,7 @@ window.Neurova = window.Neurova || {};
       // email-format validation has already run. Being asked to accept terms and only
       // then told the password is too short would be the wrong order.
       if(isSignup){
-        const agreed = await requireConsent();
+        const agreed = await requireConsent(document.getElementById('authSubmitBtn'));
         if(!agreed) return;
       }
 

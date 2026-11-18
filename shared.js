@@ -2701,6 +2701,8 @@ window.Neurova = window.Neurova || {};
   // Google button appears on the log-in screen, where consent was given long ago and
   // asking again would be noise.
   async function signInWithGoogle(isSigningUp){
+    // Asking up front when the screen is offering to create an account keeps the terms
+    // in front of someone before Google's popup appears, which is the right order.
     if(isSigningUp){
       const agreed = await requireConsent();
       if(!agreed) return;
@@ -2711,17 +2713,38 @@ window.Neurova = window.Neurova || {};
     try{
       const provider = new firebase.auth.GoogleAuthProvider();
       const result = await auth.signInWithPopup(provider);
-      if(db && result.user){
+      if(!result.user) return;
+
+      // The screen's mode is a guess, not a fact. "Log in" is shown to any browser that
+      // has held an account before, but the Google button there creates a new account
+      // just as readily as the one on the sign-up screen -- a different Google address,
+      // or the same person on a shared computer, and Firebase silently registers it.
+      // That path collected no consent at all.
+      //
+      // additionalUserInfo.isNewUser is the fact. When an account really was just
+      // created and the terms were not already agreed to, ask now; declining deletes the
+      // account again, so none can exist without consent. A returning user never sees
+      // this, which is why it is not simply shown on every Google sign-in.
+      const isNew = !!(result.additionalUserInfo && result.additionalUserInfo.isNewUser);
+      if(isNew && !isSigningUp){
+        const agreed = await requireConsent();
+        if(!agreed){
+          try{ await result.user.delete(); }
+          catch(e){ console.error('Could not undo the new account:', e); try{ await auth.signOut(); }catch(e2){} }
+          authBusy = false;
+          renderAccountPanel();
+          return;
+        }
+      }
+
+      if(db){
         db.collection('users').doc(result.user.uid).set({
           email: result.user.email,
           name: result.user.displayName || '',
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true }).catch(err => console.error('Profile write failed:', err));
       }
-      // Google's popup is the one route where a brand-new account and a returning one
-      // are indistinguishable from here, so the record is written whenever consent was
-      // actually collected -- which is exactly when isSigningUp is true.
-      if(isSigningUp && result.user) recordConsent(result.user.uid);
+      if(isSigningUp || isNew) recordConsent(result.user.uid);
       // onAuthStateChanged will re-render on success
     } catch(err){
       authBusy = false;

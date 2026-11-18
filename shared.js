@@ -301,14 +301,24 @@ window.Neurova = window.Neurova || {};
 
   let port = null;
   let writer = null;
+  // The one thing everything above this line needs from a glove: somewhere to send a
+  // command. Web Serial fills it from a real port today; the simulator fills it from a
+  // script; a Bluetooth transport will fill it from a GATT characteristic without any
+  // of the callers knowing. Connected-ness is "is there a link", not "is there a port".
+  let link = null;   // { kind, send(line), close() }
+  const simulated = /[?&#]sim\b/.test(location.href);
   let reader = null;
   let readableClosed = null;
   let keepReading = false;
 
   const topStatusDot = document.getElementById('topStatusDot');
   const topStatusText = document.getElementById('topStatusText');
-  const panelStatusDot = document.getElementById('panelStatusDot');
-  const panelStatusText = document.getElementById('panelStatusText');
+  // Both the home panel and the test-menu panel carry a status readout. They used to
+  // share one id, so getElementById only ever found the first and the test-menu one sat
+  // on "Not connected" however connected you were -- while the Disconnect button beside
+  // it said otherwise. Classes, and update every match.
+  const panelStatusDots = document.querySelectorAll('.js-panel-dot');
+  const panelStatusTexts = document.querySelectorAll('.js-panel-status');
   const panelStateLabel = document.getElementById('panelStateLabel');
   const enterMenuBtn = document.getElementById('enterMenuBtn');
   const heroConnectBtn = document.getElementById('heroConnectBtn');
@@ -357,9 +367,10 @@ window.Neurova = window.Neurova || {};
 
   function setConnectedUI(connected){
     setScopeSampleMode(!connected);
-    [topStatusDot, panelStatusDot].forEach(d => d.classList.toggle('on', connected));
+    topStatusDot.classList.toggle('on', connected);
+    panelStatusDots.forEach(d => d.classList.toggle('on', connected));
     topStatusText.textContent = connected ? 'Glove connected' : 'No glove connected';
-    panelStatusText.textContent = connected ? 'Connected' : 'Not connected';
+    panelStatusTexts.forEach(t => { t.textContent = connected ? 'Connected' : 'Not connected'; });
     enterMenuBtn.disabled = !connected;
     heroConnectBtn.textContent = connected ? 'Glove connected' : 'Connect your glove';
     heroConnectBtn.disabled = connected;
@@ -368,6 +379,7 @@ window.Neurova = window.Neurova || {};
   setConnectedUI(false);
 
   async function connectSerial(){
+    if(simulated){ connectSimulator(); return; }
     if(!serialSupported){
       alert('This browser doesn\'t support Web Serial. Try Chrome or Edge on desktop.');
       return;
@@ -376,12 +388,14 @@ window.Neurova = window.Neurova || {};
       port = await navigator.serial.requestPort();
       await port.open({ baudRate: parseInt(baudSelect.value, 10) });
       writer = port.writable.getWriter();
+      const encoder = new TextEncoder();
+      link = { kind: 'serial', send: (l) => writer.write(encoder.encode(l + '\n')) };
       setConnectedUI(true);
       startReadLoop();
       // Opening the port resets the board, and the bootloader eats anything sent during
       // the first second or so — so ask once the sketch is actually running. The board
       // also announces its status on boot; either answer is handled the same way.
-      setTimeout(() => { if(writer) sendCommand('STATUS').catch(()=>{}); }, 2000);
+      setTimeout(() => { if(link) sendCommand('STATUS').catch(()=>{}); }, 2000);
     }catch(err){
       if(err && err.name !== 'NotFoundError'){
         console.error(err);
@@ -392,6 +406,8 @@ window.Neurova = window.Neurova || {};
 
   async function disconnectSerial(){
     keepReading = false;
+    try{ if(link && link.close){ link.close(); } }catch(e){}
+    link = null;
     try{ if(reader){ await reader.cancel(); } }catch(e){}
     try{ if(writer){ writer.releaseLock(); } }catch(e){}
     try{ if(readableClosed){ await readableClosed.catch(()=>{}); } }catch(e){}
@@ -406,8 +422,98 @@ window.Neurova = window.Neurova || {};
     renderCalibScreen();
   }
 
+  // ---------------- simulated glove ----------------
+  // Speaks the same line protocol as ContactTest-Final.ino, so everything above it --
+  // the calibration screen, the contact test, the EMG and flex readouts, session
+  // logging -- runs exactly as it does against the real board. Enabled with ?sim on the
+  // URL and nowhere else, so an ordinary visitor never meets it. The point is to let the
+  // app be built and demonstrated while the hardware is still in pieces; it is a stand-in
+  // for a glove, not evidence that one works.
+  function connectSimulator(){
+    let baseline = null;         // Ω, null until calibrated
+    let emgTimer = null, flexTimer = null, flexPhase = 0;
+    const timers = new Set();
+
+    const emit = (line) => handleIncomingLine(line);
+    const after = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+    // Real contact wanders; a flat number would make every screen look better behaved
+    // than the hardware has ever been.
+    const jitter = (v, frac) => v * (1 + (Math.random() - 0.5) * 2 * frac);
+
+    function receive(cmd){
+      cmd = String(cmd).trim();
+      if(cmd === 'STATUS'){
+        after(60, () => emit(baseline === null ? 'STATUS:uncalibrated'
+                                               : 'STATUS:calibrated:' + baseline.toFixed(0) + ':measured'));
+        return;
+      }
+      const setB = cmd.match(/^SETBASELINE:(-?\d+(?:\.\d+)?)$/i);
+      if(setB){
+        baseline = parseFloat(setB[1]);
+        after(60, () => emit('BASELINE_SET:' + baseline.toFixed(0) + ':restored'));
+        return;
+      }
+      if(cmd === 'CALIBRATE'){
+        emit('Hold still — sampling contact.');
+        [600, 1200, 1800].forEach((ms, i) => after(ms, () => emit('sample ' + (i + 1) + ' of 3')));
+        after(2400, () => {
+          baseline = jitter(812000, 0.04);
+          emit('CALIBRATION_RESULT:done:' + baseline.toFixed(0));
+        });
+        return;
+      }
+      if(cmd === 'TEST'){
+        if(baseline === null){ after(60, () => emit('Not calibrated.')); return; }
+        emit('Measuring contact…');
+        after(1800, () => {
+          const avg = jitter(baseline * 1.08, 0.06);
+          const good = 6 + Math.floor(Math.random() * 4);
+          const poor = 10 - good;
+          const verdict = good >= 9 ? 'EXCELLENT' : good >= 7 ? 'GOOD' : 'MARGINAL';
+          emit('TEST_RESULT:' + verdict + ':' + good + ',' + poor + ',0:' + avg.toFixed(0));
+        });
+        return;
+      }
+      if(cmd === 'EMG_STREAM_START'){
+        if(emgTimer) return;
+        let t = 0;
+        // Resting noise with an occasional burst, so the trace is not a flat line.
+        emgTimer = setInterval(() => {
+          t += 1;
+          const burst = (t % 140) < 25 ? 180 + Math.random() * 120 : 0;
+          emit('EMG_LIVE:' + Math.round(330 + (Math.random() - 0.5) * 40 + burst));
+        }, 20);
+        return;
+      }
+      if(cmd === 'EMG_STREAM_STOP'){ clearInterval(emgTimer); emgTimer = null; return; }
+      if(cmd === 'FLEX_STREAM_START'){
+        if(flexTimer) return;
+        flexTimer = setInterval(() => {
+          flexPhase += 0.06;
+          const pct = Math.round(45 + 42 * Math.sin(flexPhase));
+          emit('FLEX_LIVE:' + pct + ',' + (520 + pct * 1.9).toFixed(1));
+        }, 40);
+        return;
+      }
+      if(cmd === 'FLEX_STREAM_STOP'){ clearInterval(flexTimer); flexTimer = null; return; }
+      if(/^FLEXCAL:/i.test(cmd)){ after(80, () => emit(cmd + ':OK')); return; }
+    }
+
+    function close(){
+      timers.forEach(clearTimeout); timers.clear();
+      clearInterval(emgTimer); emgTimer = null;
+      clearInterval(flexTimer); flexTimer = null;
+    }
+
+    link = { kind: 'simulated', send: (l) => { receive(l); return Promise.resolve(); }, close };
+    setConnectedUI(true);
+    // A real board announces itself on boot; so does this one.
+    after(150, () => emit('CONFIG:1000000:5.00'));
+    after(300, () => emit('STATUS:uncalibrated'));
+  }
+
   async function toggleConnection(){
-    if(port){ await disconnectSerial(); }
+    if(link){ await disconnectSerial(); }
     else{ await connectSerial(); }
   }
 
@@ -415,12 +521,11 @@ window.Neurova = window.Neurova || {};
   panelConnectBtn.addEventListener('click', toggleConnection);
 
   async function sendCommand(cmd){
-    if(!writer){
+    if(!link){
       alert('Connect your glove first.');
       return false;
     }
-    const encoder = new TextEncoder();
-    await writer.write(encoder.encode(cmd + '\n'));
+    await link.send(cmd);
     return true;
   }
 
@@ -1388,7 +1493,7 @@ window.Neurova = window.Neurova || {};
   // Hands the account's remembered baseline to the board, but only when the board is
   // connected and doesn't already have one of its own.
   function maybePushSavedBaseline(){
-    if(!port || !writer) return;
+    if(!link) return;
     if(boardBaseline) return;
     if(!savedAccountCalib || typeof savedAccountCalib.calibrationBaseline !== 'number') return;
     sendCommand('SETBASELINE:' + savedAccountCalib.calibrationBaseline).catch(()=>{});

@@ -295,9 +295,6 @@ window.Neurova = window.Neurova || {};
 
   // ---------------- serial support check ----------------
   const serialSupported = 'serial' in navigator;
-  if(!serialSupported){
-    document.getElementById('unsupportedNotice').style.display = 'block';
-  }
 
   let port = null;
   let writer = null;
@@ -380,8 +377,12 @@ window.Neurova = window.Neurova || {};
 
   async function connectSerial(){
     if(simulated){ connectSimulator(); return; }
+    // Desktop keeps the cable: Web Serial is what the board speaks today and what every
+    // existing instruction assumes. A phone has no Web Serial at all, so it goes to
+    // Bluetooth automatically; ?ble forces it on desktop for testing a wireless board.
+    if(forceBle || (!serialSupported && bluetoothSupported)){ await connectBluetooth(); return; }
     if(!serialSupported){
-      alert('This browser doesn\'t support Web Serial. Try Chrome or Edge on desktop.');
+      alert('This browser can\'t connect to the glove. Use Chrome or Edge on desktop for a cabled glove, or Chrome on Android for a wireless one.');
       return;
     }
     try{
@@ -406,6 +407,9 @@ window.Neurova = window.Neurova || {};
 
   async function disconnectSerial(){
     keepReading = false;
+    if(bleDevice){ try{ bleDevice.removeEventListener('gattserverdisconnected', handleBleDropped); }catch(e){} }
+    bleDevice = null;
+    bleBuffer = '';
     try{ if(link && link.close){ link.close(); } }catch(e){}
     link = null;
     try{ if(reader){ await reader.cancel(); } }catch(e){}
@@ -417,6 +421,107 @@ window.Neurova = window.Neurova || {};
     setConnectedUI(false);
     // Nothing can be tested without a board, and on the next connect the board tells us
     // its baseline again — so don't leave the tests looking open.
+    boardBaseline = null;
+    setTestUnlocked(false);
+    renderCalibScreen();
+  }
+
+  // ---------------- bluetooth ----------------
+  // Nordic UART Service: serial over BLE, and the service an nRF52840 exposes by default.
+  // Picked because the firmware already speaks newline-delimited text and NUS carries
+  // exactly that -- so the parser, the command set and the simulator are all untouched by
+  // the move off a cable. Web Bluetooth needs HTTPS and a user gesture; the connect
+  // button is one.
+  const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+  const NUS_RX      = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';   // phone writes here
+  const NUS_TX      = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';   // glove notifies here
+  const bluetoothSupported = !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+  const forceBle = /[?&#]ble\b/.test(location.href);
+
+  // The "unsupported" notice used to appear whenever Web Serial was missing, which meant
+  // every phone saw it. That was right when a cable was the only way in; with Bluetooth
+  // it would be telling an Android user to go and find a desktop for no reason. Shown
+  // now only when neither transport exists -- which is an iPhone or iPad, where no
+  // browser can reach the glove at all.
+  if(!serialSupported && !bluetoothSupported){
+    const notice = document.getElementById('unsupportedNotice');
+    if(notice) notice.style.display = 'block';
+  }
+  let bleDevice = null;
+  let bleBuffer = '';
+
+  // The default BLE payload is 20 bytes. Commands are short, but SETBASELINE with a six
+  // figure number plus a newline is already close, so everything is written in slices
+  // rather than assuming one will fit.
+  async function bleWrite(ch, bytes){
+    for(let i = 0; i < bytes.length; i += 20){
+      const slice = bytes.slice(i, i + 20);
+      try{
+        if(ch.writeValueWithoutResponse) await ch.writeValueWithoutResponse(slice);
+        else await ch.writeValue(slice);
+      }catch(e){
+        await ch.writeValue(slice);
+      }
+    }
+  }
+
+  async function connectBluetooth(){
+    if(!bluetoothSupported){
+      alert('This browser can\'t use Bluetooth. On a phone, try Chrome on Android — iPhone and iPad browsers have no Bluetooth access.');
+      return;
+    }
+    try{
+      const device = await navigator.bluetooth.requestDevice({ filters: [{ services: [NUS_SERVICE] }] });
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(NUS_SERVICE);
+      const rx = await service.getCharacteristic(NUS_RX);
+      const tx = await service.getCharacteristic(NUS_TX);
+
+      bleBuffer = '';
+      const decoder = new TextDecoder();
+      await tx.startNotifications();
+      tx.addEventListener('characteristicvaluechanged', (e) => {
+        // Notifications arrive in packets, not lines -- a line can span two of them and a
+        // packet can hold several. Same buffering the serial read loop does.
+        bleBuffer += decoder.decode(e.target.value);
+        let i;
+        while((i = bleBuffer.indexOf('\n')) >= 0){
+          const line = bleBuffer.slice(0, i);
+          bleBuffer = bleBuffer.slice(i + 1);
+          handleIncomingLine(line);
+        }
+      });
+
+      device.addEventListener('gattserverdisconnected', handleBleDropped);
+      bleDevice = device;
+
+      const encoder = new TextEncoder();
+      link = {
+        kind: 'bluetooth',
+        send: (l) => bleWrite(rx, encoder.encode(l + '\n')),
+        close: () => { try{ if(device.gatt.connected) device.gatt.disconnect(); }catch(e){} }
+      };
+      setConnectedUI(true);
+      // No bootloader to wait out over BLE, unlike opening a serial port.
+      setTimeout(() => { if(link) sendCommand('STATUS').catch(()=>{}); }, 300);
+    }catch(err){
+      // Dismissing the chooser is a NotFoundError and is not worth a dialog.
+      if(err && err.name !== 'NotFoundError'){
+        console.error('Bluetooth connect failed:', err);
+        alert('Could not connect over Bluetooth: ' + (err.message || err.name));
+      }
+    }
+  }
+
+  // The glove walking out of range is a disconnect the user did not ask for, so it has to
+  // tear down the same state the Disconnect button does -- otherwise the tests stay
+  // unlocked against a glove that is not there.
+  function handleBleDropped(){
+    if(!bleDevice) return;
+    bleDevice = null;
+    link = null;
+    bleBuffer = '';
+    setConnectedUI(false);
     boardBaseline = null;
     setTestUnlocked(false);
     renderCalibScreen();

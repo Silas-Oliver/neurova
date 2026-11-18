@@ -57,13 +57,6 @@
   color:var(--muted); font-size:14px;
 }
 
-/* The one value that has to be filled in before this is published. Styled loudly on
-   purpose: if it ever reaches the live site it should be impossible to miss. */
-.legal-todo{
-  background:#fff4e5; border:1px dashed var(--warn); color:#8a5520;
-  padding:2px 7px; border-radius:3px; font-weight:600; font-size:0.95em;
-}
-
 @media (max-width:560px){
   .legal-head{padding-top:36px;}
   .legal-body h2{margin-top:36px;}

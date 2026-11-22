@@ -26,20 +26,28 @@
     --radius-lg: 10px;
 
     /* ---------- motion ----------
-       One scale, read by everything below, so the site's whole feel is these five
-       numbers. Deliberately short and flat: this is an instrument, and motion here
-       exists to confirm that something happened, never to perform. Nothing
-       overshoots -- the easing is a plain decelerate, so no element ever travels
-       past where it is going and comes back.
+       One scale, read by everything below, so the site's whole feel is these
+       numbers. Longer and further than the first pass, which was tuned so tight it
+       was easy to miss entirely -- these are roughly double the durations and the
+       travel distance, which is the difference between motion you only notice when
+       it is gone and motion you actually see.
+
+       Two easings, and the split matters. Things that arrive get --ease-rise, which
+       carries a little past its destination and settles back; that overshoot is
+       most of what makes an entrance read as deliberate rather than as a jump.
+       Things that merely change -- a border colour on focus, a hover, a status chip
+       recolouring -- keep the plain decelerate, because a colour that overshoots
+       does not look expressive, it looks like a rendering fault.
 
        Every rule using these is covered by the prefers-reduced-motion block below,
        which zeroes all durations globally. */
-    --dur-press: 90ms;    /* a control acknowledging a finger           */
-    --dur-quick: 120ms;   /* focus rings, hovers, colour changes        */
-    --dur-page: 140ms;    /* a page arriving                            */
-    --dur-land: 180ms;    /* something appearing that carries meaning   */
-    --lift: 6px;          /* the only travel distance in the system     */
+    --dur-press: 130ms;   /* a control acknowledging a finger           */
+    --dur-quick: 180ms;   /* focus rings, hovers, colour changes        */
+    --dur-page: 260ms;    /* a page arriving                            */
+    --dur-land: 320ms;    /* something appearing that carries meaning   */
+    --lift: 14px;         /* the only travel distance in the system     */
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-rise: cubic-bezier(0.22, 1, 0.36, 1);
     --shadow: 0 1px 2px rgba(28,43,39,0.06), 0 8px 24px -12px rgba(28,43,39,0.18);
   }
   *{box-sizing:border-box;}
@@ -1998,7 +2006,7 @@
     padding:24px;
     background:rgba(28,43,39,0.42);
     backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
-    animation:consentFade 180ms ease-out;
+    animation:consentFade var(--dur-page) var(--ease);
   }
   @keyframes consentFade{ from{opacity:0;} to{opacity:1;} }
 
@@ -2008,9 +2016,9 @@
     padding:28px; text-align:left;
     width:100%; max-width:440px;
     max-height:calc(100vh - 48px); overflow-y:auto;
-    animation:consentRise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    animation:consentRise var(--dur-land) var(--ease-rise);
   }
-  @keyframes consentRise{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+  @keyframes consentRise{ from{opacity:0; transform:translateY(var(--lift)) scale(0.97);} to{opacity:1; transform:none;} }
   @media (prefers-reduced-motion: reduce){
     .consent-backdrop, .consent-modal{animation:none;}
   }
@@ -2127,13 +2135,13 @@
      simply visible, and the worst a stall can do is dim it for the length of one
      setTimeout. The same reasoning produced the setTimeout fallback already guarding
      the chart's reveal. */
-  .page.page-active.is-entering{animation:pageIn var(--dur-page) var(--ease);}
+  .page.page-active.is-entering{animation:pageIn var(--dur-page) var(--ease-rise);}
 
   /* The account page fades without the lift, and must keep doing so. .auth-brand is
      position:fixed and lives inside this page; a transform on an ancestor makes that
      ancestor the containing block for fixed descendants, so for the 140ms the lift
      was running the sign-in logo would detach from the viewport and visibly jump. */
-  #page-account.page-active.is-entering{animation:pageInFlat var(--dur-page) var(--ease);}
+  #page-account.page-active.is-entering{animation:pageInFlat var(--dur-page) var(--ease-rise);}
 
   /* ---------- a control acknowledging a press ---------- */
   /* Matters most on a phone, where there is no hover state and a finger covers the
@@ -2147,10 +2155,10 @@
                transform var(--dur-press) var(--ease);
   }
   .btn:active, .btn-google:active, .auth-linkish:active{
-    transform:scale(0.98);
+    transform:scale(0.955);
   }
-  .ios-tab:active{transform:scale(0.92);}
-  .hamburger:active{transform:scale(0.94);}
+  .ios-tab:active{transform:scale(0.86);}
+  .hamburger:active{transform:scale(0.88);}
   /* A disabled control must not pretend to respond. */
   .btn:disabled:active, .btn-google:disabled:active, .auth-linkish:disabled:active{
     transform:none;
@@ -2175,7 +2183,7 @@
     to{opacity:1; transform:none;}
   }
   .contact-status:not(:empty), .auth-error, .calib-auth-note, .data-auth-banner, .upsell{
-    animation:msgIn var(--dur-land) var(--ease);
+    animation:msgIn var(--dur-land) var(--ease-rise);
   }
 
   /* ---------- the device, and the result of a test ---------- */
@@ -2204,7 +2212,7 @@
   /* .meter-value is deliberately absent: it is rewritten by renderCalibScreen on
      every re-render, so an entrance there would flicker rather than inform. */
   .verdict-text.did-land, .ec-hero-card-read.did-land{
-    animation:resultIn var(--dur-land) var(--ease);
+    animation:resultIn var(--dur-land) var(--ease-rise);
   }
 
   /* ---------- panels that belong to a control ---------- */
@@ -2217,7 +2225,7 @@
   }
 
   .mobile-nav-panel{
-    transition:max-height 0.28s var(--ease), opacity var(--dur-page) var(--ease);
+    transition:max-height var(--dur-land) var(--ease-rise), opacity var(--dur-page) var(--ease);
     opacity:0;
   }
   .mobile-nav-panel.open{opacity:1;}

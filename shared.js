@@ -97,7 +97,9 @@ window.Neurova = window.Neurova || {};
       void p.offsetWidth;          // flush, so re-navigating to the same page replays
       p.classList.add('is-entering');
       clearTimeout(p._enterTimer);
-      p._enterTimer = setTimeout(() => p.classList.remove('is-entering'), 400);
+      // Comfortably longer than --dur-page, so this only ever fires as the backstop
+      // it is meant to be and never clips an animation that is still running.
+      p._enterTimer = setTimeout(() => p.classList.remove('is-entering'), 700);
     });
     // The sign-in page takes over the viewport, but only while it is the page on screen —
     // being signed out must not strip the chrome from the rest of the site.

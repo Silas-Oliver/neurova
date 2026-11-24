@@ -238,6 +238,22 @@
      than shrinking the card -- which is the right trade: a short scroll is recoverable,
      a button hidden under a fixed bar is not. */
   body.auth-fullscreen.on-account .auth-split{
+    /* Clearance for the fixed version-switch bar, taken OUT of the height rather than
+       added as padding. Adding it made this page 46px taller than the screen, and this
+       page is built never to scroll -- one screen, brand at the top, form on the bottom
+       edge. Those 46px of scroll were enough to collapse the mobile browser's toolbar,
+       which changes the viewport height, which resizes the whole flex column and the
+       artwork inside it mid-gesture. */
+    padding-bottom:0;
+  }
+  /* Clearance for the fixed version bar goes on the form, not on the page.
+     As page padding it grew the document past the screen and introduced the scroll
+     that started this. Subtracting it from the column's height instead left the column
+     shorter than its own content, so the content overflowed its box and the last
+     control -- "Continue as a guest" -- ended up underneath the bar.
+     On the form it is absorbed by the artwork above, which is flex:1 1 auto and shrinks
+     to take it, so the column stays exactly one screen and nothing lands under the bar. */
+  body.auth-fullscreen.on-account .auth-split-form{
     padding-bottom:calc(46px + env(safe-area-inset-bottom));
   }
   body.auth-fullscreen.on-account{background:var(--bg);}
@@ -258,7 +274,16 @@
     position:relative;
     display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
     gap:64px; align-items:center;
-    min-height:100vh; max-width:1260px; margin:0 auto;
+    /* dvh follows the toolbar as it collapses; vh is the large viewport and overflows
+       by the toolbar's height on a phone. The vh line stays first as the fallback. */
+    /* svh, not vh or dvh. vh is the LARGE viewport and overflows by the toolbar's
+       height on a phone; dvh tracks the toolbar live, so the column -- and the artwork
+       sized from it -- visibly resizes the moment a scroll starts collapsing it. svh is
+       the small viewport and is constant, which is what a layout built never to move
+       needs. vh stays first as the fallback. */
+    min-height:100vh;
+    min-height:100svh;
+    max-width:1260px; margin:0 auto;
     padding:30px 40px;
     color:var(--ink);
   }
@@ -366,7 +391,13 @@
        is what lets a flex item shrink below its content size. */
     .auth-split-art{order:1; flex:1 1 auto; min-height:90px; justify-content:center;}
     .auth-split-art img{
-      width:auto; height:100%; max-width:100%; max-height:100%;
+      /* auto/auto with both maxima: the box takes the image's own proportions, scaled
+         down to fit. With height:100% the box was a fixed height while max-width:100%
+         clamped its width, so on a narrow screen the box stopped matching the image's
+         aspect, object-fit letterboxed inside it, and border-radius rounded the empty
+         bands while the picture itself kept square corners. Sizing the box to the
+         image means there are no bands and the radius is always on the picture. */
+      width:auto; height:auto; max-width:100%; max-height:100%;
       object-fit:contain; box-shadow:none;
     }
 
@@ -2237,4 +2268,15 @@
     font-family:'IBM Plex Mono', ui-monospace, monospace;
     font-size:11.5px; color:var(--line-strong); letter-spacing:0.02em;
     user-select:all;   /* one click selects the whole string to paste into a message */
+  }
+
+  /* The mobile page padding at .force-mobile .page > section > .wrap is !important and
+     declared after the auth-fullscreen reset, so it won that cascade and kept 20px of
+     bottom padding under the sign-in card. On a screen this layout is supposed to fill
+     exactly, 20px is the difference between a page that cannot scroll and one that can
+     -- and any scroll at all is what starts the mobile toolbar collapsing. Last word on
+     the subject, and scoped to the takeover so every other page keeps its padding. */
+  body.auth-fullscreen.on-account .page > section > .wrap{
+    padding-top:0 !important;
+    padding-bottom:0 !important;
   }

@@ -4,19 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Neurova</title>
-<link rel="icon" href="favicon-96x96.png" type="image/x-icon">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f4f6f4">
-<!-- Exactly one apple-touch-icon, and it carries its size.
-     There were two here, the second a dark-appearance variant qualified with
-     media="(prefers-color-scheme: dark)". That did not work and could not have.
-     Safari ignores media on apple-touch-icon, and when several are declared with no
-     sizes to choose between it takes the LAST one -- so iOS was picking the dark
-     tile every time, in light appearance too. The note that used to sit here had the
-     rule backwards and claimed the first link was the fallback.
-     A web clip gets one icon; iOS 18's light/dark/tinted icon variants come from a
-     native app's asset catalog and are not available here. -->
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<!-- Touch icons at fresh paths under /icons/, each declaring its real size.
+     Several links are fine and are the conventional setup PRECISELY BECAUSE each
+     carries sizes: Safari picks the best match by size. The earlier bug here was two
+     links with NO sizes, where Safari falls back to taking the last one declared.
+     The paths are new on purpose. The previous file was a valid 180x180 PNG served
+     as image/png with good CRCs, and iOS still drew its letter placeholder with the
+     manifest in play and with it switched off -- which points at a cached failure
+     rather than a bad file. A URL iOS has never seen has nothing cached against it. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/touch-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="/icons/touch-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/icons/touch-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="/icons/touch-120.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -33,7 +35,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261123-68">
+<link rel="stylesheet" href="shared.css?v=20261124-69">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -675,6 +677,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261123-68"></script>
+<script src="shared.js?v=20261124-69"></script>
 </body>
 </html>

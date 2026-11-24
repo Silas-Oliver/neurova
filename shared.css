@@ -2229,3 +2229,12 @@
     opacity:0;
   }
   .mobile-nav-panel.open{opacity:1;}
+
+  /* The build identifier in the footer. Deliberately mono and dim: it is diagnostic
+     information, there to answer "is this tab actually on the latest" and nothing
+     else, so it should be findable without competing with the links beside it. */
+  .site-version{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11.5px; color:var(--line-strong); letter-spacing:0.02em;
+    user-select:all;   /* one click selects the whole string to paste into a message */
+  }

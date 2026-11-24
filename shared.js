@@ -38,6 +38,33 @@ window.Neurova = window.Neurova || {};
   window.Neurova.rememberDestination = rememberDestination;
   window.Neurova.takeDestination = takeDestination;
 
+  // ---------------- build identifier ----------------
+  //
+  // Taken out of this file's own ?v=, not written here as a literal. The whole point
+  // of showing it is to answer "am I looking at a stale page", and a hardcoded string
+  // cannot answer that -- it would be served from the same cache as everything else
+  // and would confidently report whatever version it was cached alongside. Reading it
+  // back off the URL the browser actually fetched means the number shown is, by
+  // construction, the build running in this tab.
+  //
+  // document.currentScript is read at parse time; by the time any handler runs it is
+  // null, which is why this is captured here at the top rather than where it is used.
+  const BUILD = (function(){
+    try{
+      const self = document.currentScript
+        || document.querySelector('script[src*="shared.js"]');
+      const m = self && /[?&]v=([^&"']+)/.exec(self.getAttribute('src') || '');
+      return m ? decodeURIComponent(m[1]) : 'unversioned';
+    }catch(e){ return 'unversioned'; }
+  })();
+  window.Neurova.build = BUILD;
+
+  document.querySelectorAll('[data-version]').forEach(el => { el.textContent = BUILD; });
+
+  // Also on the console, so it can be read off a phone over remote inspection, or
+  // quoted in a bug report, without hunting for the footer.
+  try{ console.info('Neurova build ' + BUILD); }catch(e){}
+
   // ---------------- motion helpers ----------------
   //
   // Replays the CSS entrance on an element whose text was just rewritten. Changing

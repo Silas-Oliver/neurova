@@ -35,7 +35,7 @@
 </script>
 <script>
 (function(){
-  var SITE_VERSION = '20261124-69';
+  var SITE_VERSION = '20261124-70';
   try{
     // An explicit ?view= in the address overrides, and replaces, whatever was stored.
     // Without this the stored preference is a one-way door: it is written only by the
@@ -81,7 +81,17 @@
     // in an email, #data in a message, the links out of privacy.html -- silently landed
     // on the home page, because the redirect dropped the one part of the URL saying
     // where to go.
-    location.replace(target + '?v=' + SITE_VERSION + (window.location.hash || ''));
+    // Deferred to DOMContentLoaded rather than fired here in the head. Running it
+    // inline aborts the document the moment the parser reaches this script, which
+    // means anything reading this page for metadata -- an icon, a manifest, a title --
+    // is reading a document that navigates away underneath it. The delay is a single
+    // tick and nobody sees it.
+    var go = function(){
+      location.replace(target + '?v=' + SITE_VERSION + (window.location.hash || ''));
+    };
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', go);
+    } else { go(); }
   } catch(e){
     location.replace('desktop.html?v=' + SITE_VERSION + (window.location.hash || ''));
   }

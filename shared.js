@@ -110,8 +110,27 @@ window.Neurova = window.Neurova || {};
   }
   window.Neurova.setGrowOrigin = setGrowOrigin;
 
+  // Identity is required for every page except the one that grants it. A guest counts
+  // -- the gate is not about having paid or registered, it is that nothing renders for
+  // a visitor the app has never been introduced to.
+  //
+  // 'account' is the sole exception, because it is where the gate sends people and a
+  // gate redirecting to a gated page is a loop.
+  const OPEN_PAGES = ['account'];
+  function gateArmed(){ return window.Neurova.authSettled === true; }
+  function hasIdentity(){ return !!(window.Neurova.getUser && window.Neurova.getUser()); }
+
   function showPage(name){
     if(!PAGES.includes(name)) name = 'home';
+
+    // Every route goes through here -- a nav click, the mobile dock, the back button,
+    // a hash typed into the bar, and the redirect that lands on desktop.html or
+    // mobile.html -- so this is the one place the check has to be.
+    if(gateArmed() && !hasIdentity() && !OPEN_PAGES.includes(name)){
+      rememberDestination(name);
+      name = 'account';
+    }
+
     document.querySelectorAll('.page').forEach(p => {
       const active = p.dataset.page === name;
       p.classList.toggle('page-active', active);
@@ -2302,7 +2321,6 @@ window.Neurova = window.Neurova || {};
   // account is not, so it is remembered here. That is what decides whether a signed-out
   // visitor should be met with the sign-up form or the log-in form.
   const HAS_ACCOUNT_KEY = 'neurovaHasAccount';
-  const AUTH_SEEN_KEY = 'neurovaAuthSeen';
 
   function rememberHasAccount(){
     try{ localStorage.setItem(HAS_ACCOUNT_KEY, '1'); }catch(e){ /* storage unavailable */ }
@@ -2336,13 +2354,12 @@ window.Neurova = window.Neurova || {};
   function routeOnFirstResolve(user){
     if(user){ if(!user.isAnonymous) rememberHasAccount(); revealSite(); return; }
 
-    // Once per browser session. This is an arrival behaviour, not a restriction, so a
-    // visitor who has already seen the sign-in screen and chosen to carry on without an
-    // account is left alone from then on.
-    let already = false;
-    try{ already = sessionStorage.getItem(AUTH_SEEN_KEY) === '1'; }catch(e){}
-    if(already){ revealSite(); return; }
-    try{ sessionStorage.setItem(AUTH_SEEN_KEY, '1'); }catch(e){}
+    // No once-per-session reprieve any more. It used to return early if the sign-in
+    // screen had already been shown this session, which is precisely what made
+    // "Switch to desktop version" a way in: that link is an ordinary href to the other
+    // HTML file, so it reloaded the site with the flag already set and sailed straight
+    // past. Typing either filename did the same. The flag is gone; the gate in
+    // showPage now holds on every load and every navigation.
 
     // Hold on to where they were trying to go before we overwrite it with the sign-in
     // screen, so signing in can finish the journey instead of dumping them on Home.
@@ -3712,6 +3729,11 @@ window.Neurova = window.Neurova || {};
       if(window.Neurova.refreshDataPage) window.Neurova.refreshDataPage();
       if(user) loadSavedCalibrationForCurrentUser();
 
+      // Until Firebase answers, "no user" and "not asked yet" are the same thing, so
+      // the gate stays open and the document stays hidden behind .auth-pending. From
+      // here a missing user really does mean signed out.
+      window.Neurova.authSettled = true;
+
       if(!initialAuthResolved){
         initialAuthResolved = true;
         // Arriving on a sign-in link takes priority: it is already a destination, and
@@ -3730,6 +3752,10 @@ window.Neurova = window.Neurova || {};
           const dest = window.Neurova.takeDestination ? window.Neurova.takeDestination() : null;
           if(window.Neurova.goToPage) window.Neurova.goToPage(dest || 'home');
         }
+      } else {
+        // Signed out part-way through. Re-run the current route so the gate closes
+        // behind them instead of leaving the last signed-in page on screen.
+        if(window.Neurova.goToPage) window.Neurova.goToPage((location.hash || '#home').slice(1));
       }
     });
   } else {

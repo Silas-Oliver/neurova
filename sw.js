@@ -11,7 +11,7 @@
 // when the network cannot be reached. Online, the worker is invisible. Offline, the site
 // still opens and every page already visited still works.
 
-const CACHE = 'neurova-runtime-v1';
+const CACHE = 'neurova-runtime-v2';
 
 self.addEventListener('install', () => {
   // Take over straight away rather than waiting for every tab to close.
@@ -55,8 +55,20 @@ self.addEventListener('fetch', (event) => {
           // CSS with this release's HTML is imperfect, but it is the difference between
           // a site that opens offline and one that does not, and online this branch is
           // never reached.
-          return caches.match(req, { ignoreSearch: true })
-            .then((loose) => loose || caches.match('./index.html', { ignoreSearch: true }));
+          return caches.match(req, { ignoreSearch: true }).then((loose) => {
+            if (loose) return loose;
+            // The app-shell fallback is for navigations ONLY. It used to be returned
+            // for any same-origin GET that missed, which meant a failed image, script
+            // or stylesheet fetch was answered with an HTML document. That is not a
+            // degraded response, it is the wrong type: a PNG request handed index.html
+            // does not render, and the one that bit was apple-touch-icon.png, where a
+            // single bad fetch is enough because iOS caches a web clip's icon hard and
+            // does not go back for it.
+            if (req.mode === 'navigate') {
+              return caches.match('./index.html', { ignoreSearch: true });
+            }
+            return Response.error();
+          });
         })
       )
   );

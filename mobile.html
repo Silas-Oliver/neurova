@@ -19,7 +19,7 @@
      rule backwards and claimed the first link was the fallback.
      A web clip gets one icon; iOS 18's light/dark/tinted icon variants come from a
      native app's asset catalog and are not available here. -->
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -36,7 +36,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=20261123-63">
+<link rel="stylesheet" href="shared.css?v=20261123-64">
 <script>
   // Hold the first paint until we know whether this visitor gets the site or the sign-in
   // page. Firebase reports auth state asynchronously, so without this the home page
@@ -47,8 +47,45 @@
   // floor under it: if the Firebase SDK fails to load or never answers, the site still
   // appears rather than staying blank.
   document.documentElement.classList.add('auth-pending');
-  setTimeout(function(){ document.documentElement.classList.remove('auth-pending'); }, 2500);
+  setTimeout(function(){
+    // The floor used to simply unhide whatever page was active, which handed the whole
+    // site to anyone whose Firebase load failed -- and to anyone who could arrange for
+    // it to fail. It still refuses to leave the page blank, but it now surfaces the
+    // account page rather than the site, so a broken sign-in degrades to "you cannot
+    // sign in" instead of "you are in".
+    try{
+      if(!(window.Neurova && window.Neurova.authSettled)){
+        if(window.Neurova && window.Neurova.goToPage) window.Neurova.goToPage('account');
+        else if(location.hash !== '#account') location.hash = '#account';
+      }
+    }catch(e){}
+    document.documentElement.classList.remove('auth-pending');
+  }, 2500);
 </script>
+<noscript>
+  <!-- Without scripting there is no Firebase, so there is no sign-in and nothing to
+       check against -- every page would simply be readable. The markup is hidden and
+       replaced with an explanation, which is also honest: none of the app works
+       without JavaScript anyway. -->
+  <style>
+    .site-header, main.wrap, .ios-tabbar, footer, .version-switch{display:none !important;}
+    .noscript-note{
+      max-width:460px; margin:18vh auto; padding:0 24px;
+      font-family:'IBM Plex Sans', system-ui, sans-serif; color:#1c2b27; line-height:1.6;
+    }
+    .noscript-note h1{font-family:'Space Grotesk', sans-serif; font-size:22px; margin:0 0 12px;}
+    .noscript-note p{color:#5c6d68; font-size:15px; margin:0 0 12px;}
+    .noscript-note a{color:#2f6e63;}
+  </style>
+  <div class="noscript-note">
+    <h1>JavaScript is required</h1>
+    <p>Neurova signs you in, talks to the glove and draws your results entirely in the
+       browser, so none of it runs without JavaScript. Enable it for this site and
+       reload.</p>
+    <p>The <a href="privacy.html">Privacy Policy</a> and
+       <a href="terms.html">Terms of Service</a> are plain pages and read fine without it.</p>
+  </div>
+</noscript>
 </head>
 <body class="force-mobile">
 
@@ -718,7 +755,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="shared.js?v=20261123-63"></script>
+<script src="shared.js?v=20261123-64"></script>
 <script>
 // Keeps the phone dashboard's status tile in step with the header chip that shared.js
 // already maintains, rather than duplicating connection logic. The metric tiles read the

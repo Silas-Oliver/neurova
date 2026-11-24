@@ -2280,3 +2280,29 @@
     padding-top:0 !important;
     padding-bottom:0 !important;
   }
+
+  /* ---------- sign-in: lock the viewport ----------
+     Even sized in svh this page could still scroll the document by a few pixels on a
+     short screen, and on iOS a document scroll is what collapses the browser toolbar.
+     The toolbar collapsing changes the viewport, the column is measured against the
+     viewport, and the artwork is measured against the column -- so a scroll of any
+     size resized the picture while the finger was still moving. That is the jitter.
+
+     Locking the document and giving the column its own scroller fixes it at the
+     source: scrolling an inner element does not move the toolbar, so the viewport
+     never changes and nothing re-measures. On a screen tall enough -- almost all of
+     them -- there is nothing to scroll and this does nothing at all. */
+  body.auth-fullscreen.on-account{
+    overflow:hidden;
+    height:100vh;
+    height:100svh;
+  }
+  body.auth-fullscreen.on-account .auth-split{
+    height:100vh;
+    height:100svh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    /* Stops a flick inside the column from chaining out to the document and dragging
+       the toolbar with it once the inner scroller reaches its end. */
+    overscroll-behavior:contain;
+  }
